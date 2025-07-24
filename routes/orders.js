@@ -89,6 +89,17 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // 테이블 정보 조회
+    const tableResult = await client.query(
+      `SELECT table_number FROM tables WHERE id = $1`,
+      [table_id]
+    );
+
+    if (tableResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: '해당 테이블이 없습니다' });
+    }
+
     // 주문 생성
     const orderResult = await client.query(
       `INSERT INTO orders (table_id, status, total_price, created_at)
