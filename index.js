@@ -35,7 +35,21 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('클라이언트 연결 해제:', socket.id);
   });
+  
 });
+
+// 주문 관련
+io.to('staff').emit('order-updated', orderData);
+
+// 호출 관련  
+io.to('staff').emit('call-updated', callData);
+
+// 메뉴 관련
+io.to('staff').emit('menu-updated', menuData);
+io.to('table-' + tableId).emit('menu-updated', menuData);
+
+// 테이블 관련
+io.to('staff').emit('table-updated', tableData);
 
 app.set('io', io);
 
