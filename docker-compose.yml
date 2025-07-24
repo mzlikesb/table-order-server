@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: tableorder-postgres
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-585716}
+      POSTGRES_USER: ${POSTGRES_USER:-dypark}
+      POSTGRES_DB: ${POSTGRES_DB:-tableorder}
+    ports:
+      - "${POSTGRES_PORT:-15432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tableorder-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dypark} -d ${POSTGRES_DB:-tableorder}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  server:
+    build: .
+    container_name: tableorder-server
+    ports:
+      - "${SERVER_PORT:-4000}:4000"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-dypark}
+      - DB_PASSWORD=${DB_PASSWORD:-585716}
+      - DB_NAME=${DB_NAME:-tableorder}
+      - PORT=4000
+      - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tableorder-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/api/menus"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tableorder-network:
+    driver: bridge
