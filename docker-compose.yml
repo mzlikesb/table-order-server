@@ -12,6 +12,7 @@ services:
       - "${POSTGRES_PORT:-15432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d
     networks:
       - tableorder-network
     restart: unless-stopped

@@ -54,14 +54,18 @@ io.to('staff').emit('table-updated', tableData);
 app.set('io', io);
 
 const menusRouter = require('./routes/menus');
+const menuCategoriesRouter = require('./routes/menu-categories');
 const ordersRouter = require('./routes/orders');
 const tablesRouter = require('./routes/tables');
 const callsRouter = require('./routes/calls');
+const storesRouter = require('./routes/stores');
 
 app.use('/api/menus', menusRouter);
+app.use('/api/menu-categories', menuCategoriesRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/tables', tablesRouter);
 app.use('/api/calls', callsRouter);
+app.use('/api/stores', storesRouter);
 
 // 4. API 테스트를 위한 기본 라우트(경로)를 만듭니다.
 app.get('/api', (req, res) => {
