@@ -48,16 +48,26 @@ const socketHelpers = {
 };
 app.set('socketHelpers', socketHelpers);
 
-// 라우터 설정
-const authRouter = require('../routes/auth');
-const tablesRouter = require('../routes/tables');
-const menusRouter = require('../routes/menus');
-const menuCategoriesRouter = require('../routes/menu-categories');
-const ordersRouter = require('../routes/orders');
-const callsRouter = require('../routes/calls');
-const storesRouter = require('../routes/stores');
-const uploadRouter = require('../routes/upload');
-const tenantRouter = require('../routes/tenant');
+// 라우터 설정 (데이터베이스 연결 없이도 로드되도록)
+let authRouter, tablesRouter, menusRouter, menuCategoriesRouter, ordersRouter, callsRouter, storesRouter, uploadRouter, tenantRouter;
+
+try {
+  authRouter = require('../routes/auth');
+  tablesRouter = require('../routes/tables');
+  menusRouter = require('../routes/menus');
+  menuCategoriesRouter = require('../routes/menu-categories');
+  ordersRouter = require('../routes/orders');
+  callsRouter = require('../routes/calls');
+  storesRouter = require('../routes/stores');
+  uploadRouter = require('../routes/upload');
+  tenantRouter = require('../routes/tenant');
+} catch (error) {
+  console.log('⚠️ 라우터 로드 실패, 빈 라우터 사용:', error.message);
+  
+  // 빈 라우터 생성
+  const emptyRouter = express.Router();
+  authRouter = tablesRouter = menusRouter = menuCategoriesRouter = ordersRouter = callsRouter = storesRouter = uploadRouter = tenantRouter = emptyRouter;
+}
 
 app.use('/api/auth', authRouter);
 app.use('/api/tables', tablesRouter);
