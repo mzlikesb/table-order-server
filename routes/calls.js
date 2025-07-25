@@ -2,16 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
-require('dotenv').config();
-
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+const pool = require('../db/connection');
 
 /**
  * [GET] /api/calls
@@ -57,7 +48,7 @@ router.get('/:id', async (req, res) => {
       JOIN tables t ON c.table_id = t.id
       JOIN stores s ON c.store_id = s.id
       LEFT JOIN admins a ON c.responded_by = a.id
-      WHERE c.id = $1
+      WHERE c.id = $1::INTEGER
     `, [id]);
 
     if (result.rowCount === 0) {
@@ -90,7 +81,7 @@ router.post('/', async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO calls (store_id, table_id, call_type, message, status, created_at)
-       VALUES ($1, $2, $3, $4, 'pending', NOW()) RETURNING *`,
+       VALUES ($1::INTEGER, $2::INTEGER, $3::VARCHAR(20), $4, 'pending', NOW()) RETURNING *`,
       [store_id, table_id, call_type, message || null]
     );
 
@@ -104,22 +95,28 @@ router.post('/', async (req, res) => {
       FROM calls c
       JOIN tables t ON c.table_id = t.id
       JOIN stores s ON c.store_id = s.id
-      WHERE c.id = $1
+      WHERE c.id = $1::INTEGER
     `, [result.rows[0].id]);
 
-    // **실시간 호출 알림 발송** - 직원들에게
-    const io = req.app.get('io');
-    const callData = callWithTable.rows[0];
-    
-    io.to('staff').emit('new-call', {
-      callId: callData.id,
-      storeId: callData.store_id,
-      tableId: callData.table_id,
-      tableNumber: callData.table_number,
-      callType: callData.call_type,
-      message: callData.message,
-      createdAt: callData.created_at
-    });
+    // **실시간 호출 알림 발송** - 직원들에게 (Socket.IO가 설정된 경우에만)
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const callData = callWithTable.rows[0];
+        io.to('staff').emit('new-call', {
+          callId: callData.id,
+          storeId: callData.store_id,
+          tableId: callData.table_id,
+          tableNumber: callData.table_number,
+          callType: callData.call_type,
+          message: callData.message,
+          createdAt: callData.created_at
+        });
+      }
+    } catch (socketError) {
+      console.warn('Socket.IO 알림 발송 실패:', socketError);
+      // Socket.IO 오류는 호출 등록을 막지 않음
+    }
     
     res.status(201).json(callWithTable.rows[0]);
   } catch (e) {
@@ -146,66 +143,75 @@ router.patch('/:id/status', async (req, res) => {
   }
 
   try {
-    let query, params;
+    let updateQuery, updateParams;
     
     if (status === 'responded') {
-      query = `
+      updateQuery = `
         UPDATE calls SET 
-          status = $1, 
-          responded_by = $2, 
+          status = $1::VARCHAR(20), 
+          responded_by = $2::INTEGER, 
           responded_at = NOW()
-        WHERE id = $3 
-        RETURNING c.*, t.table_number, s.name as store_name
-        FROM calls c
-        JOIN tables t ON c.table_id = t.id
-        JOIN stores s ON c.store_id = s.id
-        WHERE c.id = $3
+        WHERE id = $3::INTEGER 
+        RETURNING *
       `;
-      params = [status, responded_by, id];
+      updateParams = [status, responded_by, id];
     } else if (status === 'completed') {
-      query = `
+      updateQuery = `
         UPDATE calls SET 
-          status = $1, 
+          status = $1::VARCHAR(20), 
           completed_at = NOW()
-        WHERE id = $2 
-        RETURNING c.*, t.table_number, s.name as store_name
-        FROM calls c
-        JOIN tables t ON c.table_id = t.id
-        JOIN stores s ON c.store_id = s.id
-        WHERE c.id = $2
+        WHERE id = $2::INTEGER 
+        RETURNING *
       `;
-      params = [status, id];
+      updateParams = [status, id];
     } else {
-      query = `
-        UPDATE calls SET status = $1 WHERE id = $2 
-        RETURNING c.*, t.table_number, s.name as store_name
-        FROM calls c
-        JOIN tables t ON c.table_id = t.id
-        JOIN stores s ON c.store_id = s.id
-        WHERE c.id = $2
+      updateQuery = `
+        UPDATE calls SET 
+          status = $1::VARCHAR(20) 
+        WHERE id = $2::INTEGER 
+        RETURNING *
       `;
-      params = [status, id];
+      updateParams = [status, id];
     }
 
-    const result = await pool.query(query, params);
+    const result = await pool.query(updateQuery, updateParams);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: '해당 호출이 없습니다' });
     }
 
-    const updatedCall = result.rows[0];
+    // 업데이트된 호출 정보와 함께 테이블, 스토어 정보 조회
+    const callWithDetails = await pool.query(`
+      SELECT 
+        c.*, t.table_number, s.name as store_name,
+        a.username as responded_by_name
+      FROM calls c
+      LEFT JOIN tables t ON c.table_id = t.id
+      LEFT JOIN stores s ON c.store_id = s.id
+      LEFT JOIN admins a ON c.responded_by = a.id
+      WHERE c.id = $1::INTEGER
+    `, [id]);
 
-    // **실시간 알림 발송**
-    const io = req.app.get('io');
-    io.to('staff').emit('call-status-changed', {
-      callId: id,
-      storeId: updatedCall.store_id,
-      tableId: updatedCall.table_id,
-      tableNumber: updatedCall.table_number,
-      newStatus: status,
-      respondedBy: responded_by,
-      updatedAt: new Date()
-    });
+    const updatedCall = callWithDetails.rows[0];
+
+    // **실시간 알림 발송** (Socket.IO가 설정된 경우에만)
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.to('staff').emit('call-status-changed', {
+          callId: id,
+          storeId: updatedCall.store_id,
+          tableId: updatedCall.table_id,
+          tableNumber: updatedCall.table_number,
+          newStatus: status,
+          respondedBy: responded_by,
+          updatedAt: new Date()
+        });
+      }
+    } catch (socketError) {
+      console.warn('Socket.IO 알림 발송 실패:', socketError);
+      // Socket.IO 오류는 호출 상태 변경을 막지 않음
+    }
 
     res.json(updatedCall);
   } catch (e) {
