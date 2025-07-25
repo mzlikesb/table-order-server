@@ -151,7 +151,7 @@ router.post('/', async (req, res) => {
       createdAt: orderResult.rows[0].created_at
     };
 
-    io.to('staff').emit('new-order', orderData);
+    io.to(`staff-store-${store_id}`).emit('new-order', orderData);
 
     res.status(201).json({ 
       success: true, 
@@ -214,8 +214,8 @@ router.patch('/:id/status', async (req, res) => {
     try {
       const io = req.app.get('io');
       if (io) {
-        // 직원들에게 상태 변경 알림
-        io.to('staff').emit('order-status-changed', {
+        // 직원들에게 상태 변경 알림 (스토어별)
+        io.to(`staff-store-${updatedOrder.store_id}`).emit('order-status-changed', {
           orderId: id,
           orderNumber: updatedOrder.order_number,
           storeId: updatedOrder.store_id,

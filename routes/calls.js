@@ -103,7 +103,7 @@ router.post('/', async (req, res) => {
       const io = req.app.get('io');
       if (io) {
         const callData = callWithTable.rows[0];
-        io.to('staff').emit('new-call', {
+        io.to(`staff-store-${callData.store_id}`).emit('new-call', {
           callId: callData.id,
           storeId: callData.store_id,
           tableId: callData.table_id,
@@ -198,7 +198,7 @@ router.patch('/:id/status', async (req, res) => {
     try {
       const io = req.app.get('io');
       if (io) {
-        io.to('staff').emit('call-status-changed', {
+        io.to(`staff-store-${updatedCall.store_id}`).emit('call-status-changed', {
           callId: id,
           storeId: updatedCall.store_id,
           tableId: updatedCall.table_id,

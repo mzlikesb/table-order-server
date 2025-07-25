@@ -20,10 +20,16 @@ app.use(express.json());
 io.on('connection', (socket) => {
   console.log('클라이언트 연결:', socket.id);
   
-  // 직원용 룸에 참가
+  // 직원용 룸에 참가 (전체 직원용 - 기존 호환성 유지)
   socket.on('join-staff', () => {
     socket.join('staff');
-    console.log('직원이 알림방에 참가:', socket.id);
+    console.log('직원이 전체 알림방에 참가:', socket.id);
+  });
+
+  // 스토어별 직원용 룸에 참가 (권장)
+  socket.on('join-staff-store', (storeId) => {
+    socket.join(`staff-store-${storeId}`);
+    console.log(`직원이 스토어 ${storeId} 알림방에 참가:`, socket.id);
   });
 
   // 고객용 룸에 참가 (테이블별)
@@ -39,11 +45,17 @@ io.on('connection', (socket) => {
 });
 
 // Socket.IO 이벤트 예시 (실제 사용 시에는 각 라우트에서 정의된 데이터를 사용)
+// 스토어별 알림 (권장)
+// io.to(`staff-store-${storeId}`).emit('new-order', orderData);
+// io.to(`staff-store-${storeId}`).emit('order-status-changed', orderData);
+// io.to(`staff-store-${storeId}`).emit('new-call', callData);
+// io.to(`staff-store-${storeId}`).emit('call-status-changed', callData);
+
+// 테이블별 고객 알림
+// io.to(`table-${tableId}`).emit('order-update', orderData);
+
+// 전체 직원 알림 (기존 호환성 - 권장하지 않음)
 // io.to('staff').emit('order-updated', orderData);
-// io.to('staff').emit('call-updated', callData);
-// io.to('staff').emit('menu-updated', menuData);
-// io.to('table-' + tableId).emit('menu-updated', menuData);
-// io.to('staff').emit('table-updated', tableData);
 
 app.set('io', io);
 
