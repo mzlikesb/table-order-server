@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS stores (
     address         TEXT,
     phone           VARCHAR(20),
     timezone        VARCHAR(50)  DEFAULT 'Asia/Seoul',
+    logo_url        TEXT,                             -- 가게 로고 URL
+    small_logo_url  TEXT,                             -- 작은 로고 URL
     is_active       BOOLEAN      DEFAULT TRUE,
     created_at      TIMESTAMPTZ  DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ  DEFAULT CURRENT_TIMESTAMP

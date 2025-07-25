@@ -3,3 +3,15 @@
 
 # Environment Variables
 .env
+
+# Uploaded files
+uploads/
+*.log
+
+# Temporary files
+temp/
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
