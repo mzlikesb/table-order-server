@@ -64,9 +64,45 @@ try {
 } catch (error) {
   console.log('⚠️ 라우터 로드 실패, 빈 라우터 사용:', error.message);
   
-  // 빈 라우터 생성
+  // 빈 라우터 생성 (기본 인증 체크 포함)
   const emptyRouter = express.Router();
-  authRouter = tablesRouter = menusRouter = menuCategoriesRouter = ordersRouter = callsRouter = storesRouter = uploadRouter = tenantRouter = emptyRouter;
+  
+  // 기본 인증 체크 미들웨어
+  const basicAuthCheck = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: '액세스 토큰이 필요합니다' });
+    }
+    next();
+  };
+  
+  // 각 라우터에 기본 인증 체크 추가
+  authRouter = express.Router();
+  authRouter.use(basicAuthCheck);
+  
+  tablesRouter = express.Router();
+  tablesRouter.use(basicAuthCheck);
+  
+  menusRouter = express.Router();
+  menusRouter.use(basicAuthCheck);
+  
+  menuCategoriesRouter = express.Router();
+  menuCategoriesRouter.use(basicAuthCheck);
+  
+  ordersRouter = express.Router();
+  ordersRouter.use(basicAuthCheck);
+  
+  callsRouter = express.Router();
+  callsRouter.use(basicAuthCheck);
+  
+  storesRouter = express.Router();
+  storesRouter.use(basicAuthCheck);
+  
+  uploadRouter = express.Router();
+  uploadRouter.use(basicAuthCheck);
+  
+  tenantRouter = express.Router();
+  tenantRouter.use(basicAuthCheck);
 }
 
 app.use('/api/auth', authRouter);

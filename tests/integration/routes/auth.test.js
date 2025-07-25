@@ -45,8 +45,13 @@ describe('Auth Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('token');
       expect(response.body).toHaveProperty('user');
       expect(response.body.user.username).toBe('test_admin');
-      expect(response.body.user.role).toBe('owner');
-      expect(response.body.user.storeId).toBe(testData.store.id);
+      expect(response.body).toHaveProperty('stores');
+      expect(response.body.user.username).toBe('test_admin');
+      expect(response.body.user.isSuperAdmin).toBe(false);
+      expect(Array.isArray(response.body.stores)).toBe(true);
+      expect(response.body.stores.length).toBeGreaterThan(0);
+      expect(response.body.stores[0]).toHaveProperty('id', testData.store.id);
+      expect(response.body.stores[0]).toHaveProperty('role', 'owner');
     });
 
     it('should reject login with invalid username', async () => {
@@ -100,11 +105,13 @@ describe('Auth Routes Integration Tests', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('username');
-      expect(response.body).toHaveProperty('role');
-      expect(response.body).toHaveProperty('storeId');
-      expect(response.body.username).toBe('test_admin');
+      expect(response.body).toHaveProperty('user');
+      expect(response.body).toHaveProperty('stores');
+      expect(response.body.user).toHaveProperty('id');
+      expect(response.body.user).toHaveProperty('username');
+      expect(response.body.user).toHaveProperty('isSuperAdmin');
+      expect(response.body.user.username).toBe('test_admin');
+      expect(Array.isArray(response.body.stores)).toBe(true);
     });
 
     it('should reject request without token', async () => {

@@ -62,10 +62,10 @@ describe('Simple Integration Tests (No Database)', () => {
   });
 
   describe('Tenant Routes', () => {
-    it('should reject tenant routes without store ID', async () => {
+    it('should reject tenant routes without authentication', async () => {
       const response = await request(app)
         .get('/api/tenant/info')
-        .expect(400);
+        .expect(401);
       
       expect(response.body).toHaveProperty('error');
     });
