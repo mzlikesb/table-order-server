@@ -85,17 +85,46 @@ router.get('/:id', async (req, res) => {
  * 메뉴 추가
  */
 router.post('/', async (req, res) => {
-  const { store_id, category_id, name, description, price, image_url, is_available, sort_order } = req.body;
+  const { store_id, category_id, category_name, name, description, price, image_url, is_available, sort_order } = req.body;
   
   if (!store_id || !name || !price) {
     return res.status(400).json({ error: '필수 필드가 누락되었습니다 (store_id, name, price)' });
   }
   
+  // category_id가 문자열로 전달된 경우 정수로 변환
+  let parsedCategoryId = null;
+  if (category_id !== undefined && category_id !== null) {
+    parsedCategoryId = parseInt(category_id, 10);
+    if (isNaN(parsedCategoryId)) {
+      return res.status(400).json({ error: 'category_id는 유효한 숫자여야 합니다' });
+    }
+  }
+  
   try {
+    // category_id가 없고 category_name이 있는 경우, 카테고리를 자동으로 생성
+    if (!parsedCategoryId && category_name) {
+      // 먼저 해당 스토어에 같은 이름의 카테고리가 있는지 확인
+      const existingCategory = await pool.query(
+        'SELECT id FROM menu_categories WHERE store_id = $1 AND name = $2 AND is_active = true',
+        [store_id, category_name]
+      );
+      
+      if (existingCategory.rowCount > 0) {
+        parsedCategoryId = existingCategory.rows[0].id;
+      } else {
+        // 새로운 카테고리 생성
+        const newCategory = await pool.query(
+          'INSERT INTO menu_categories (store_id, name, sort_order) VALUES ($1, $2, 0) RETURNING id',
+          [store_id, category_name]
+        );
+        parsedCategoryId = newCategory.rows[0].id;
+      }
+    }
+    
     const result = await pool.query(
       `INSERT INTO menus (store_id, category_id, name, description, price, image_url, is_available, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, TRUE), COALESCE($8, 0)) RETURNING *`,
-      [store_id, category_id, name, description, price, image_url, is_available, sort_order]
+      [store_id, parsedCategoryId, name, description, price, image_url, is_available, sort_order]
     );
     res.status(201).json(result.rows[0]);
   } catch (e) {
@@ -114,13 +143,42 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { store_id, category_id, name, description, price, image_url, is_available, sort_order } = req.body;
+  const { store_id, category_id, category_name, name, description, price, image_url, is_available, sort_order } = req.body;
   
   if (!store_id || !name || !price) {
     return res.status(400).json({ error: '필수 필드가 누락되었습니다 (store_id, name, price)' });
   }
   
+  // category_id가 문자열로 전달된 경우 정수로 변환
+  let parsedCategoryId = null;
+  if (category_id !== undefined && category_id !== null) {
+    parsedCategoryId = parseInt(category_id, 10);
+    if (isNaN(parsedCategoryId)) {
+      return res.status(400).json({ error: 'category_id는 유효한 숫자여야 합니다' });
+    }
+  }
+  
   try {
+    // category_id가 없고 category_name이 있는 경우, 카테고리를 자동으로 생성
+    if (!parsedCategoryId && category_name) {
+      // 먼저 해당 스토어에 같은 이름의 카테고리가 있는지 확인
+      const existingCategory = await pool.query(
+        'SELECT id FROM menu_categories WHERE store_id = $1 AND name = $2 AND is_active = true',
+        [store_id, category_name]
+      );
+      
+      if (existingCategory.rowCount > 0) {
+        parsedCategoryId = existingCategory.rows[0].id;
+      } else {
+        // 새로운 카테고리 생성
+        const newCategory = await pool.query(
+          'INSERT INTO menu_categories (store_id, name, sort_order) VALUES ($1, $2, 0) RETURNING id',
+          [store_id, category_name]
+        );
+        parsedCategoryId = newCategory.rows[0].id;
+      }
+    }
+    
     const result = await pool.query(
       `UPDATE menus SET
          store_id = $1,
@@ -132,7 +190,7 @@ router.put('/:id', async (req, res) => {
          is_available = COALESCE($7, TRUE),
          sort_order = COALESCE($8, 0)
        WHERE id = $9 RETURNING *`,
-      [store_id, category_id, name, description, price, image_url, is_available, sort_order, id]
+      [store_id, parsedCategoryId, name, description, price, image_url, is_available, sort_order, id]
     );
     
     if (result.rowCount === 0) {
@@ -155,6 +213,7 @@ router.put('/:id', async (req, res) => {
  */
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
+  const { category_name } = req.body;
   const fields = [];
   const values = [];
   let i = 1;
@@ -165,8 +224,50 @@ router.patch('/:id', async (req, res) => {
   for (const key of allowedFields) {
     if (req.body[key] !== undefined) {
       fields.push(`${key} = $${i++}`);
-      values.push(req.body[key]);
+      
+      // category_id가 문자열로 전달된 경우 정수로 변환
+      if (key === 'category_id') {
+        const parsedCategoryId = parseInt(req.body[key], 10);
+        if (isNaN(parsedCategoryId)) {
+          return res.status(400).json({ error: 'category_id는 유효한 숫자여야 합니다' });
+        }
+        values.push(parsedCategoryId);
+      } else {
+        values.push(req.body[key]);
+      }
     }
+  }
+  
+  // category_name이 제공된 경우 카테고리 자동 생성 로직
+  if (category_name && !req.body.category_id) {
+    // 현재 메뉴의 store_id를 가져와야 함
+    const currentMenu = await pool.query('SELECT store_id FROM menus WHERE id = $1', [id]);
+    if (currentMenu.rowCount === 0) {
+      return res.status(404).json({ error: '해당 메뉴가 없습니다' });
+    }
+    
+    const store_id = currentMenu.rows[0].store_id;
+    
+    // 먼저 해당 스토어에 같은 이름의 카테고리가 있는지 확인
+    const existingCategory = await pool.query(
+      'SELECT id FROM menu_categories WHERE store_id = $1 AND name = $2 AND is_active = true',
+      [store_id, category_name]
+    );
+    
+    let categoryId;
+    if (existingCategory.rowCount > 0) {
+      categoryId = existingCategory.rows[0].id;
+    } else {
+      // 새로운 카테고리 생성
+      const newCategory = await pool.query(
+        'INSERT INTO menu_categories (store_id, name, sort_order) VALUES ($1, $2, 0) RETURNING id',
+        [store_id, category_name]
+      );
+      categoryId = newCategory.rows[0].id;
+    }
+    
+    fields.push(`category_id = $${i++}`);
+    values.push(categoryId);
   }
   
   if (fields.length === 0) {
