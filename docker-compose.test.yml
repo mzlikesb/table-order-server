@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # 테스트용 PostgreSQL 데이터베이스
+  test-db:
+    image: postgres:15-alpine
+    container_name: table_order_test_db
+    environment:
+      POSTGRES_DB: table_order_test_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"  # 메인 DB와 다른 포트 사용
+    volumes:
+      - test_db_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 테스트용 Redis (필요시)
+  test-redis:
+    image: redis:7-alpine
+    container_name: table_order_test_redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test_db_data: 

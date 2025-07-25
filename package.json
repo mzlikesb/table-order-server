@@ -10,7 +10,12 @@
     "test:coverage": "jest --coverage",
     "test:integration": "jest --testPathPattern=integration",
     "test:unit": "jest --testPathPattern=unit",
-    "test:setup": "node scripts/test-setup.js"
+    "test:setup": "node scripts/test-setup.js",
+    "test:docker": "docker-compose -f docker-compose.test.yml up -d && npm run test:wait && npm test && npm run test:cleanup",
+    "test:docker:up": "docker-compose -f docker-compose.test.yml up -d",
+    "test:docker:down": "docker-compose -f docker-compose.test.yml down -v",
+    "test:wait": "node scripts/wait-for-db.js",
+    "test:cleanup": "docker-compose -f docker-compose.test.yml down -v"
   },
   "keywords": [],
   "author": "",
