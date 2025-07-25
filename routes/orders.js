@@ -2,16 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
-require('dotenv').config();
-
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+const pool = require('../db/connection');
 
 /**
  * [GET] /api/orders
@@ -219,34 +210,53 @@ router.patch('/:id/status', async (req, res) => {
 
     const updatedOrder = orderWithDetails.rows[0];
 
-    // **실시간 알림 발송**
-    const io = req.app.get('io');
-    
-    // 직원들에게 상태 변경 알림
-    io.to('staff').emit('order-status-changed', {
-      orderId: id,
-      orderNumber: updatedOrder.order_number,
-      storeId: updatedOrder.store_id,
-      tableId: updatedOrder.table_id,
-      tableNumber: updatedOrder.table_number,
-      newStatus: status,
-      updatedAt: new Date()
-    });
+    // **실시간 알림 발송** (Socket.IO가 설정된 경우에만)
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        // 직원들에게 상태 변경 알림
+        io.to('staff').emit('order-status-changed', {
+          orderId: id,
+          orderNumber: updatedOrder.order_number,
+          storeId: updatedOrder.store_id,
+          tableId: updatedOrder.table_id,
+          tableNumber: updatedOrder.table_number,
+          newStatus: status,
+          updatedAt: new Date()
+        });
 
-    // 해당 테이블 고객에게도 알림 (주문 완료, 서빙 완료 등)
-    if (status === 'ready' || status === 'preparing') {
-      io.to(`table-${updatedOrder.table_id}`).emit('order-update', {
-        orderId: id,
-        orderNumber: updatedOrder.order_number,
-        status: status,
-        message: status === 'preparing' ? '주문이 조리 중입니다' : '주문이 완료되었습니다'
-      });
+        // 해당 테이블 고객에게도 알림 (주문 완료, 서빙 완료 등)
+        if (status === 'ready' || status === 'preparing') {
+          if (updatedOrder.table_id) {
+            io.to(`table-${updatedOrder.table_id}`).emit('order-update', {
+              orderId: id,
+              orderNumber: updatedOrder.order_number,
+              status: status,
+              message: status === 'preparing' ? '주문이 조리 중입니다' : '주문이 완료되었습니다'
+            });
+          }
+        }
+      }
+    } catch (socketError) {
+      console.warn('Socket.IO 알림 발송 실패:', socketError);
+      // Socket.IO 오류는 주문 상태 변경을 막지 않음
     }
 
     res.json(updatedOrder);
   } catch (e) {
     console.error('주문 상태 변경 실패:', e);
-    res.status(500).json({ error: '주문 상태 변경 실패' });
+    
+    // 더 자세한 오류 정보 제공
+    if (e.code === '23503') {
+      res.status(400).json({ error: '존재하지 않는 주문 ID입니다' });
+    } else if (e.code === '22P02') {
+      res.status(400).json({ error: '잘못된 주문 ID 형식입니다' });
+    } else {
+      res.status(500).json({ 
+        error: '주문 상태 변경 실패',
+        details: process.env.NODE_ENV === 'development' ? e.message : undefined
+      });
+    }
   }
 });
 
