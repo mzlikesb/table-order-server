@@ -91,6 +91,12 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: '필수 필드가 누락되었습니다 (store_id, name, price)' });
   }
   
+  // price가 문자열로 전달된 경우 숫자로 변환
+  const parsedPrice = parseFloat(price);
+  if (isNaN(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ error: 'price는 유효한 숫자여야 합니다' });
+  }
+  
   // category_id가 문자열로 전달된 경우 정수로 변환
   let parsedCategoryId = null;
   if (category_id !== undefined && category_id !== null) {
@@ -124,7 +130,7 @@ router.post('/', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO menus (store_id, category_id, name, description, price, image_url, is_available, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, TRUE), COALESCE($8, 0)) RETURNING *`,
-      [store_id, parsedCategoryId, name, description, price, image_url, is_available, sort_order]
+      [store_id, parsedCategoryId, name, description, parsedPrice, image_url, is_available, sort_order]
     );
     res.status(201).json(result.rows[0]);
   } catch (e) {
@@ -147,6 +153,12 @@ router.put('/:id', async (req, res) => {
   
   if (!store_id || !name || !price) {
     return res.status(400).json({ error: '필수 필드가 누락되었습니다 (store_id, name, price)' });
+  }
+  
+  // price가 문자열로 전달된 경우 숫자로 변환
+  const parsedPrice = parseFloat(price);
+  if (isNaN(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ error: 'price는 유효한 숫자여야 합니다' });
   }
   
   // category_id가 문자열로 전달된 경우 정수로 변환
@@ -190,7 +202,7 @@ router.put('/:id', async (req, res) => {
          is_available = COALESCE($7, TRUE),
          sort_order = COALESCE($8, 0)
        WHERE id = $9 RETURNING *`,
-      [store_id, parsedCategoryId, name, description, price, image_url, is_available, sort_order, id]
+      [store_id, parsedCategoryId, name, description, parsedPrice, image_url, is_available, sort_order, id]
     );
     
     if (result.rowCount === 0) {
@@ -232,6 +244,14 @@ router.patch('/:id', async (req, res) => {
           return res.status(400).json({ error: 'category_id는 유효한 숫자여야 합니다' });
         }
         values.push(parsedCategoryId);
+      } 
+      // price가 문자열로 전달된 경우 숫자로 변환
+      else if (key === 'price') {
+        const parsedPrice = parseFloat(req.body[key]);
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          return res.status(400).json({ error: 'price는 유효한 숫자여야 합니다' });
+        }
+        values.push(parsedPrice);
       } else {
         values.push(req.body[key]);
       }
