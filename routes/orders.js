@@ -201,17 +201,23 @@ router.patch('/:id/status', async (req, res) => {
         status = $1,
         completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
       WHERE id = $2 
-      RETURNING o.*, t.table_number, s.name as store_name
-      FROM orders o
-      JOIN tables t ON o.table_id = t.id
-      JOIN stores s ON o.store_id = s.id
-      WHERE o.id = $2
+      RETURNING *
     `, [status, id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: '해당 주문이 없습니다' });
     }
-    const updatedOrder = result.rows[0];
+
+    // 업데이트된 주문 정보와 함께 테이블, 스토어 정보 조회
+    const orderWithDetails = await pool.query(`
+      SELECT o.*, t.table_number, s.name as store_name
+      FROM orders o
+      LEFT JOIN tables t ON o.table_id = t.id
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.id = $1
+    `, [id]);
+
+    const updatedOrder = orderWithDetails.rows[0];
 
     // **실시간 알림 발송**
     const io = req.app.get('io');
