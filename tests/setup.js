@@ -86,7 +86,7 @@ global.createTestData = async () => {
     // 테스트 테이블 생성
     const tableResult = await global.testPool.query(`
       INSERT INTO tables (store_id, table_number, name, capacity) 
-      VALUES ($1, 'A1', '테스트 테이블', 4) 
+      VALUES ($1, 1, '테스트 테이블', 4) 
       RETURNING *
     `, [testStore.id]);
     const testTable = tableResult.rows[0];

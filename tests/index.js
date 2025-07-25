@@ -57,6 +57,7 @@ const ordersRouter = require('../routes/orders');
 const callsRouter = require('../routes/calls');
 const storesRouter = require('../routes/stores');
 const uploadRouter = require('../routes/upload');
+const tenantRouter = require('../routes/tenant');
 
 app.use('/api/auth', authRouter);
 app.use('/api/tables', tablesRouter);
@@ -66,6 +67,7 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/calls', callsRouter);
 app.use('/api/stores', storesRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/tenant', tenantRouter);
 
 // 기본 라우트
 app.get('/', (req, res) => {
