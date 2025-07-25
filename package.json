@@ -10,7 +10,7 @@
     "test:coverage": "jest --coverage",
     "test:integration": "jest --testPathPattern=integration",
     "test:unit": "jest --testPathPattern=unit",
-    "test:setup": "powershell -ExecutionPolicy Bypass -File scripts/test-setup.ps1"
+    "test:setup": "bash scripts/test-setup.sh"
   },
   "keywords": [],
   "author": "",
