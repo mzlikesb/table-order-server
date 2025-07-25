@@ -89,10 +89,10 @@ describe('Auth Routes Integration Tests', () => {
   describe('GET /api/auth/me', () => {
     it('should return current user info with valid token', async () => {
       const token = global.generateTestToken({
-        id: testData.admin.id,
+        adminId: testData.admin.id,
         username: testData.admin.username,
-        role: testData.admin.role,
-        storeId: testData.store.id
+        email: testData.admin.email,
+        is_super_admin: false
       });
 
       const response = await request(app)
@@ -130,10 +130,10 @@ describe('Auth Routes Integration Tests', () => {
   describe('POST /api/auth/refresh', () => {
     it('should refresh token with valid token', async () => {
       const token = global.generateTestToken({
-        id: testData.admin.id,
+        adminId: testData.admin.id,
         username: testData.admin.username,
-        role: testData.admin.role,
-        storeId: testData.store.id
+        email: testData.admin.email,
+        is_super_admin: false
       });
 
       const response = await request(app)
@@ -159,10 +159,10 @@ describe('Auth Routes Integration Tests', () => {
   describe('POST /api/auth/logout', () => {
     it('should logout successfully with valid token', async () => {
       const token = global.generateTestToken({
-        id: testData.admin.id,
+        adminId: testData.admin.id,
         username: testData.admin.username,
-        role: testData.admin.role,
-        storeId: testData.store.id
+        email: testData.admin.email,
+        is_super_admin: false
       });
 
       const response = await request(app)

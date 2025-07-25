@@ -11,10 +11,10 @@ describe('Stores Routes Integration Tests', () => {
     
     // Super Admin 토큰 생성
     superAdminToken = global.generateTestToken({
-      id: 999,
+      adminId: 999,
       username: 'super_admin',
-      role: 'super_admin',
-      storeId: null
+      email: 'super@example.com',
+      is_super_admin: true
     });
   });
 
@@ -52,10 +52,10 @@ describe('Stores Routes Integration Tests', () => {
 
     it('should reject request without super admin role', async () => {
       const regularToken = global.generateTestToken({
-        id: testData.admin.id,
+        adminId: testData.admin.id,
         username: testData.admin.username,
-        role: 'owner',
-        storeId: testData.store.id
+        email: testData.admin.email,
+        is_super_admin: false
       });
 
       const response = await request(app)

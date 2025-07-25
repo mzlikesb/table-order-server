@@ -10,10 +10,10 @@ describe('Menus Routes Integration Tests', () => {
     testData = await global.createTestData();
     
     authToken = global.generateTestToken({
-      id: testData.admin.id,
+      adminId: testData.admin.id,
       username: testData.admin.username,
-      role: 'owner',
-      storeId: testData.store.id
+      email: testData.admin.email,
+      is_super_admin: false
     });
   });
 
