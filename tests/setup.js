@@ -39,13 +39,23 @@ global.setupTestDatabase = async () => {
     await global.testPool.query(`
       CREATE TABLE IF NOT EXISTS admins (
         id SERIAL PRIMARY KEY,
-        store_id INTEGER REFERENCES stores(id),
         username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        role VARCHAR(20) DEFAULT 'staff',
-        is_active BOOLEAN DEFAULT TRUE,
+        is_super_admin BOOLEAN DEFAULT FALSE,
+        last_login_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await global.testPool.query(`
+      CREATE TABLE IF NOT EXISTS admin_store_permissions (
+        admin_id INTEGER REFERENCES admins(id) ON DELETE CASCADE,
+        store_id INTEGER REFERENCES stores(id) ON DELETE CASCADE,
+        role VARCHAR(20) DEFAULT 'manager' CHECK (role IN ('owner', 'manager', 'staff')),
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (admin_id, store_id)
       );
     `);
 
@@ -155,6 +165,7 @@ global.cleanupTestDatabase = async () => {
     await global.testPool.query('DELETE FROM menus;');
     await global.testPool.query('DELETE FROM menu_categories;');
     await global.testPool.query('DELETE FROM tables;');
+    await global.testPool.query('DELETE FROM admin_store_permissions;');
     await global.testPool.query('DELETE FROM admins;');
     await global.testPool.query('DELETE FROM stores;');
     
@@ -178,11 +189,17 @@ global.createTestData = async () => {
 
     // 테스트 관리자 생성
     const adminResult = await global.testPool.query(`
-      INSERT INTO admins (store_id, username, password_hash, role) 
-      VALUES ($1, 'test_admin', '$2b$10$test_hash', 'owner') 
+      INSERT INTO admins (username, email, password_hash, is_super_admin) 
+      VALUES ('test_admin', 'test@example.com', '$2b$10$test_hash', false) 
       RETURNING *
-    `, [testStore.id]);
+    `);
     const testAdmin = adminResult.rows[0];
+
+    // 관리자-스토어 권한 생성
+    await global.testPool.query(`
+      INSERT INTO admin_store_permissions (admin_id, store_id, role) 
+      VALUES ($1, $2, 'owner')
+    `, [testAdmin.id, testStore.id]);
 
     // 테스트 테이블 생성
     const tableResult = await global.testPool.query(`
@@ -225,10 +242,10 @@ global.createTestData = async () => {
 global.generateTestToken = (payload = {}) => {
   const jwt = require('jsonwebtoken');
   const defaultPayload = {
-    id: 1,
+    adminId: 1,
     username: 'test_admin',
-    role: 'owner',
-    storeId: 1,
+    email: 'test@example.com',
+    is_super_admin: false,
     ...payload
   };
   return jwt.sign(defaultPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
