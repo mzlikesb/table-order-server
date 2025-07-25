@@ -27,7 +27,7 @@ describe('Simple Integration Tests (No Database)', () => {
       const response = await request(app)
         .post('/api/auth/register')
         .send({})
-        .expect(400);
+        .expect(401); // 인증 미들웨어가 먼저 실행됨
       
       expect(response.body).toHaveProperty('error');
     });

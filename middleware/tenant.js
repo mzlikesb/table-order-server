@@ -20,7 +20,7 @@ const tenantMiddleware = async (req, res, next) => {
     }
     
     // 3. 요청 바디에서 추출 (POST/PUT 요청)
-    if (!storeId && req.body.store_id) {
+    if (!storeId && req.body && req.body.store_id) {
       storeId = parseInt(req.body.store_id);
     }
     
