@@ -72,10 +72,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Table Order Server - Test Environment' });
 });
 
-// 404 핸들러
-app.use('*', (req, res) => {
-  res.status(404).json({ error: '요청한 리소스를 찾을 수 없습니다' });
-});
+// 404 핸들러는 제거 (Express 5.x 호환성 문제)
 
 // 에러 핸들러
 app.use((err, req, res, next) => {
