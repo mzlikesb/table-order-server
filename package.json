@@ -10,7 +10,7 @@
     "test:coverage": "jest --coverage",
     "test:integration": "jest --testPathPattern=integration",
     "test:unit": "jest --testPathPattern=unit",
-    "test:setup": "bash scripts/test-setup.sh"
+    "test:setup": "node scripts/test-setup.js"
   },
   "keywords": [],
   "author": "",
