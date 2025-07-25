@@ -189,9 +189,9 @@ router.patch('/:id/status', async (req, res) => {
   try {
     const result = await pool.query(`
       UPDATE orders SET 
-        status = $1,
-        completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
-      WHERE id = $2 
+        status = $1::VARCHAR(20),
+        completed_at = CASE WHEN $1::VARCHAR(20) = 'completed' THEN NOW() ELSE completed_at END
+      WHERE id = $2::INTEGER
       RETURNING *
     `, [status, id]);
 
@@ -205,7 +205,7 @@ router.patch('/:id/status', async (req, res) => {
       FROM orders o
       LEFT JOIN tables t ON o.table_id = t.id
       LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.id = $1
+      WHERE o.id = $1::INTEGER
     `, [id]);
 
     const updatedOrder = orderWithDetails.rows[0];
