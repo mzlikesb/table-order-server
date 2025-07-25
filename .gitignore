@@ -12,6 +12,12 @@ uploads/
 temp/
 *.tmp
 
+# Test files
+coverage/
+.nyc_output/
+test-results/
+junit.xml
+
 # OS generated files
 .DS_Store
 Thumbs.db
