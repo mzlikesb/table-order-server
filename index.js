@@ -48,12 +48,14 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 const menusRouter = require('./routes/menus');
+const menuCategoriesRouter = require('./routes/menu-categories');
 const ordersRouter = require('./routes/orders');
 const tablesRouter = require('./routes/tables');
 const callsRouter = require('./routes/calls');
 const storesRouter = require('./routes/stores');
 
 app.use('/api/menus', menusRouter);
+app.use('/api/menu-categories', menuCategoriesRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/tables', tablesRouter);
 app.use('/api/calls', callsRouter);
