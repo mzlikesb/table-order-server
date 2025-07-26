@@ -258,14 +258,12 @@ describe('Calls Routes Integration Tests', () => {
         .patch(`/api/calls/${callId}/status`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .send({ status: 'responding' })
+        .send({ status: 'responded' })
         .expect(200);
 
-      expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('call');
-      expect(response.body.call).toHaveProperty('status', 'responding');
-      expect(response.body.call).toHaveProperty('responded_by', testData.admin.id);
-      expect(response.body.call).toHaveProperty('responded_at');
+      expect(response.body).toHaveProperty('status', 'responded');
+      expect(response.body).toHaveProperty('responded_by', testData.admin.id);
+      expect(response.body).toHaveProperty('responded_at');
     });
 
     it('should reject status update for non-existent call', async () => {
@@ -273,7 +271,7 @@ describe('Calls Routes Integration Tests', () => {
         .patch('/api/calls/99999/status')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .send({ status: 'responding' })
+        .send({ status: 'responded' })
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
@@ -284,7 +282,7 @@ describe('Calls Routes Integration Tests', () => {
       const response = await request(app)
         .patch('/api/calls/1/status')
         .set('X-Store-ID', testData.store.id.toString())
-        .send({ status: 'responding' })
+        .send({ status: 'responded' })
         .expect(401);
 
       expect(response.body).toHaveProperty('error');
@@ -547,7 +545,8 @@ describe('Calls Routes Integration Tests', () => {
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('call');
-      expect(response.body.call).toHaveProperty('status', 'responding');
+      expect(response.body).toHaveProperty('response_type');
+      expect(response.body.call).toHaveProperty('status', 'responded');
       expect(response.body.call).toHaveProperty('responded_by', testData.admin.id);
       expect(response.body).toHaveProperty('message');
     });

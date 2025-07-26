@@ -298,8 +298,6 @@ router.patch('/:id',
     
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {
-        fields.push(`${key} = $${i++}`);
-        
         // 테이블 번호는 문자열로 변환
         if (key === 'table_number') {
           fields.push(`${key} = $${i}::VARCHAR(10)`);
@@ -308,6 +306,7 @@ router.patch('/:id',
           fields.push(`${key} = $${i}`);
           values.push(req.body[key]);
         }
+        i++;
       }
     }
     

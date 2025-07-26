@@ -11,30 +11,70 @@ const {
 
 /**
  * [GET] /api/menu-categories
- * 메뉴 카테고리 전체 조회 (멀티테넌트 - 가게별 필터링)
+ * 메뉴 카테고리 전체 목록 조회 (멀티테넌트 - 가게별 필터링)
  */
 router.get('/', 
   authenticateToken, 
   requireStorePermission,
   async (req, res) => {
-    const { store_id, include_inactive = false } = req.query;
-    const storeId = store_id || req.tenant?.storeId;
-    
-    if (!storeId) {
-      return res.status(400).json({ error: 'store_id가 필요합니다' });
-    }
+    const { include_inactive = false } = req.query;
+    const storeId = req.tenant?.storeId;
     
     try {
-      let query = 'SELECT * FROM menu_categories WHERE store_id = $1';
-      let params = [storeId];
+      let query = `
+        SELECT 
+          mc.*,
+          COUNT(m.id) as menu_count,
+          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
+        FROM menu_categories mc
+        LEFT JOIN menus m ON mc.id = m.category_id
+        WHERE mc.store_id = $1
+      `;
       
       if (!include_inactive) {
-        query += ' AND is_active = true';
+        query += ' AND mc.is_active = true';
       }
       
-      query += ' ORDER BY sort_order, name';
+      query += ' GROUP BY mc.id ORDER BY mc.sort_order, mc.name';
       
-      const result = await pool.query(query, params);
+      const result = await pool.query(query, [storeId]);
+      res.json(result.rows);
+    } catch (e) {
+      console.error('메뉴 카테고리 조회 실패:', e);
+      res.status(500).json({ error: '메뉴 카테고리 조회 실패' });
+    }
+  }
+);
+
+/**
+ * [GET] /api/menu-categories/with-menu-count
+ * 메뉴 카테고리 목록 조회 (메뉴 개수 포함)
+ */
+router.get('/with-menu-count', 
+  authenticateToken, 
+  requireStorePermission,
+  async (req, res) => {
+    const { include_inactive = false } = req.query;
+    const storeId = req.tenant?.storeId;
+    
+    try {
+      let query = `
+        SELECT 
+          mc.*,
+          COUNT(m.id) as menu_count,
+          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
+        FROM menu_categories mc
+        LEFT JOIN menus m ON mc.id = m.category_id
+        WHERE mc.store_id = $1
+      `;
+      
+      if (!include_inactive) {
+        query += ' AND mc.is_active = true';
+      }
+      
+      query += ' GROUP BY mc.id ORDER BY mc.sort_order, mc.name';
+      
+      const result = await pool.query(query, [storeId]);
       res.json(result.rows);
     } catch (e) {
       console.error('메뉴 카테고리 조회 실패:', e);
@@ -383,43 +423,6 @@ router.post('/bulk-sort',
     } catch (e) {
       console.error('카테고리 순서 일괄 변경 실패:', e);
       res.status(500).json({ error: '카테고리 순서 일괄 변경 실패' });
-    }
-  }
-);
-
-/**
- * [GET] /api/menu-categories/with-menu-count
- * 메뉴 카테고리와 메뉴 개수 함께 조회 (멀티테넌트)
- */
-router.get('/with-menu-count', 
-  authenticateToken, 
-  requireStorePermission,
-  async (req, res) => {
-    const { include_inactive = false } = req.query;
-    const storeId = req.tenant?.storeId;
-    
-    try {
-      let query = `
-        SELECT 
-          mc.*,
-          COUNT(m.id) as menu_count,
-          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
-        FROM menu_categories mc
-        LEFT JOIN menus m ON mc.id = m.category_id
-        WHERE mc.store_id = $1
-      `;
-      
-      if (!include_inactive) {
-        query += ' AND mc.is_active = true';
-      }
-      
-      query += ' GROUP BY mc.id ORDER BY mc.sort_order, mc.name';
-      
-      const result = await pool.query(query, [storeId]);
-      res.json(result.rows);
-    } catch (e) {
-      console.error('메뉴 카테고리 조회 실패:', e);
-      res.status(500).json({ error: '메뉴 카테고리 조회 실패' });
     }
   }
 );
