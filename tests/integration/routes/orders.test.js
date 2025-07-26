@@ -656,15 +656,16 @@ describe('Orders Routes Integration Tests', () => {
         .set('X-Store-ID', testData.store.id.toString())
         .expect(200);
 
-      expect(response.body).toHaveProperty('total_orders');
-      expect(response.body).toHaveProperty('pending_orders');
-      expect(response.body).toHaveProperty('preparing_orders');
-      expect(response.body).toHaveProperty('ready_orders');
-      expect(response.body).toHaveProperty('completed_orders');
-      expect(response.body).toHaveProperty('cancelled_orders');
-      expect(response.body).toHaveProperty('total_revenue');
-      expect(response.body).toHaveProperty('today_orders');
-      expect(response.body).toHaveProperty('recent_orders');
+      expect(response.body).toHaveProperty('today');
+      expect(response.body).toHaveProperty('this_week');
+      expect(response.body).toHaveProperty('hourly');
+      expect(response.body.today).toHaveProperty('total_orders');
+      expect(response.body.today).toHaveProperty('pending_orders');
+      expect(response.body.today).toHaveProperty('preparing_orders');
+      expect(response.body.today).toHaveProperty('ready_orders');
+      expect(response.body.today).toHaveProperty('completed_orders');
+      expect(response.body.today).toHaveProperty('cancelled_orders');
+      expect(response.body.today).toHaveProperty('total_revenue');
     });
   });
 }); 

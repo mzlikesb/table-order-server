@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS menu_categories (
     id          SERIAL PRIMARY KEY,
     store_id    INTEGER REFERENCES stores(id) ON DELETE CASCADE,
     name        VARCHAR(50) NOT NULL,                 -- "음료", "메인요리", "디저트" 등
+    description TEXT,                                 -- 카테고리 설명
     sort_order  INTEGER DEFAULT 0,                    -- 정렬 순서
     is_active   BOOLEAN DEFAULT TRUE,
     created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

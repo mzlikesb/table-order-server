@@ -215,7 +215,7 @@ router.delete('/:id',
       
       // 해당 카테고리에 속한 메뉴가 있는지 확인
       const menuCheck = await pool.query(
-        'SELECT COUNT(*) as menu_count FROM menus WHERE category_id = $1 AND is_active = true',
+        'SELECT COUNT(*) as menu_count FROM menus WHERE category_id = $1 AND is_available = true',
         [id]
       );
       

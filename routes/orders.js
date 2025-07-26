@@ -151,7 +151,7 @@ router.post('/',
       const menuIds = items.map(item => item.menu_id);
       const menuPlaceholders = menuIds.map((_, index) => `$${index + 1}`).join(',');
       const menuCheckResult = await client.query(
-        `SELECT id FROM menus WHERE id IN (${menuPlaceholders}) AND store_id = $${menuIds.length + 1} AND is_active = true`,
+        `SELECT id FROM menus WHERE id IN (${menuPlaceholders}) AND store_id = $${menuIds.length + 1} AND is_available = true`,
         [...menuIds, storeId]
       );
 
@@ -410,7 +410,7 @@ router.put('/:id',
         const menuIds = items.map(item => item.menu_id);
         const menuPlaceholders = menuIds.map((_, index) => `$${index + 1}`).join(',');
         const menuCheckResult = await client.query(
-          `SELECT id FROM menus WHERE id IN (${menuPlaceholders}) AND store_id = $${menuIds.length + 1} AND is_active = true`,
+          `SELECT id FROM menus WHERE id IN (${menuPlaceholders}) AND store_id = $${menuIds.length + 1} AND is_available = true`,
           [...menuIds, storeId]
         );
 
