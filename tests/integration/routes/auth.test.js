@@ -204,10 +204,10 @@ describe('Auth Routes Integration Tests', () => {
       );
 
       const token = global.generateTestToken({
-        id: testData.admin.id,
+        adminId: testData.admin.id,
         username: testData.admin.username,
-        role: testData.admin.role,
-        storeId: testData.store.id
+        email: testData.admin.email,
+        is_super_admin: false
       });
 
       const response = await request(app)
@@ -236,10 +236,10 @@ describe('Auth Routes Integration Tests', () => {
 
     it('should reject password change with invalid current password', async () => {
       const token = global.generateTestToken({
-        id: testData.admin.id,
+        adminId: testData.admin.id,
         username: testData.admin.username,
-        role: testData.admin.role,
-        storeId: testData.store.id
+        email: testData.admin.email,
+        is_super_admin: false
       });
 
       const response = await request(app)

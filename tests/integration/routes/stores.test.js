@@ -25,6 +25,14 @@ describe('Stores Routes Integration Tests', () => {
   beforeEach(async () => {
     await global.cleanupTestDatabase();
     testData = await global.createTestData();
+    
+    // 새로운 테스트 데이터에 맞는 슈퍼 관리자 토큰 생성
+    superAdminToken = global.generateTestToken({
+      adminId: testData.superAdmin.id,
+      username: testData.superAdmin.username,
+      email: testData.superAdmin.email,
+      is_super_admin: true
+    });
   });
 
   describe('GET /api/stores', () => {

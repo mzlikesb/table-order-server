@@ -24,6 +24,14 @@ describe('Menus Routes Integration Tests', () => {
   beforeEach(async () => {
     await global.cleanupTestDatabase();
     testData = await global.createTestData();
+    
+    // 새로운 테스트 데이터에 맞는 토큰 생성
+    authToken = global.generateTestToken({
+      adminId: testData.admin.id,
+      username: testData.admin.username,
+      email: testData.admin.email,
+      is_super_admin: false
+    });
   });
 
   describe('GET /api/menus', () => {

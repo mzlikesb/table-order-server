@@ -100,9 +100,15 @@ try {
   
   uploadRouter = express.Router();
   uploadRouter.use(basicAuthCheck);
+  uploadRouter.post('/image', (req, res) => {
+    res.status(401).json({ error: '액세스 토큰이 필요합니다' });
+  });
   
   tenantRouter = express.Router();
   tenantRouter.use(basicAuthCheck);
+  tenantRouter.get('/info', (req, res) => {
+    res.status(401).json({ error: '액세스 토큰이 필요합니다' });
+  });
 }
 
 app.use('/api/auth', authRouter);
