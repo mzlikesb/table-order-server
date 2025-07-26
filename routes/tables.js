@@ -2,7 +2,8 @@
 
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/connection');
+// 테스트 환경에서는 global.testPool 사용, 프로덕션에서는 일반 pool 사용
+const pool = global.testPool || require('../db/connection');
 const { 
   authenticateToken, 
   requireStorePermission, 

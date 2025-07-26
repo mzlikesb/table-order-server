@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS menus (
 CREATE TABLE IF NOT EXISTS tables (
     id          SERIAL PRIMARY KEY,
     store_id    INTEGER REFERENCES stores(id) ON DELETE CASCADE,
-    table_number INTEGER NOT NULL,                    -- 테이블 번호
+    table_number VARCHAR(10) NOT NULL,                -- 테이블 번호 (예: "A1", "B2", "VIP1")
     name        VARCHAR(50),                          -- 테이블 이름 (예: "창가 테이블")
     capacity    INTEGER DEFAULT 4,                    -- 수용 인원
     status      VARCHAR(20) DEFAULT 'available'      -- available, occupied, reserved, maintenance

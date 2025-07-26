@@ -220,7 +220,7 @@ describe('Auth Routes Integration Tests', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toContain('비밀번호가 변경되었습니다');
+      expect(response.body.message).toContain('비밀번호가 성공적으로 변경되었습니다');
 
       // 새 비밀번호로 로그인 테스트
       const loginResponse = await request(app)

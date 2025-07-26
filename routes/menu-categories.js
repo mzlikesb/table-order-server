@@ -403,7 +403,7 @@ router.get('/with-menu-count',
         SELECT 
           mc.*,
           COUNT(m.id) as menu_count,
-          COUNT(CASE WHEN m.is_active = true THEN 1 END) as active_menu_count
+          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
         FROM menu_categories mc
         LEFT JOIN menus m ON mc.id = m.category_id
         WHERE mc.store_id = $1

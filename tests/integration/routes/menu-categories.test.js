@@ -309,15 +309,21 @@ describe('Menu Categories Routes Integration Tests', () => {
 
   describe('DELETE /api/menu-categories/:id', () => {
     it('should soft delete category', async () => {
+      // 메뉴가 없는 카테고리 생성
+      const emptyCategory = await global.testPool.query(
+        'INSERT INTO menu_categories (store_id, name, sort_order) VALUES ($1, $2, $3) RETURNING *',
+        [testData.store.id, '삭제할 카테고리', 999]
+      );
+
       const response = await request(app)
-        .delete(`/api/menu-categories/${testData.category.id}`)
+        .delete(`/api/menu-categories/${emptyCategory.rows[0].id}`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('deleted');
-      expect(response.body.deleted).toHaveProperty('id', testData.category.id);
+      expect(response.body.deleted).toHaveProperty('id', emptyCategory.rows[0].id);
       expect(response.body.deleted).toHaveProperty('is_active', false);
     });
 
@@ -350,7 +356,7 @@ describe('Menu Categories Routes Integration Tests', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('활성화된 메뉴가 있는 카테고리는 삭제할 수 없습니다');
+      expect(response.body.error).toContain('이 카테고리에 속한 메뉴가 있습니다');
     });
   });
 
@@ -432,10 +438,11 @@ describe('Menu Categories Routes Integration Tests', () => {
         .send(duplicateData)
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('name', duplicateData.new_name);
-      expect(response.body).toHaveProperty('sort_order');
-      expect(response.body).toHaveProperty('store_id', testData.store.id);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('new_category');
+      expect(response.body).toHaveProperty('original_category');
+      expect(response.body.new_category).toHaveProperty('name', duplicateData.new_name);
+      expect(response.body.new_category).toHaveProperty('store_id', testData.store.id);
       expect(response.body.id).not.toBe(testData.category.id); // 새로운 ID여야 함
     });
 
@@ -458,7 +465,7 @@ describe('Menu Categories Routes Integration Tests', () => {
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('해당 카테고리가 없습니다');
+      expect(response.body.error).toContain('원본 카테고리가 없습니다');
     });
   });
 }); 

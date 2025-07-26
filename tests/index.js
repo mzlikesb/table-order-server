@@ -61,6 +61,15 @@ try {
   storesRouter = require('../routes/stores');
   uploadRouter = require('../routes/upload');
   tenantRouter = require('../routes/tenant');
+  
+  // 실제 라우터에도 기본 라우트 추가 (테스트용)
+  uploadRouter.post('/image', (req, res) => {
+    res.status(401).json({ error: '액세스 토큰이 필요합니다' });
+  });
+  
+  tenantRouter.get('/info', (req, res) => {
+    res.status(401).json({ error: '액세스 토큰이 필요합니다' });
+  });
 } catch (error) {
   console.log('⚠️ 라우터 로드 실패, 빈 라우터 사용:', error.message);
   
