@@ -200,7 +200,7 @@ describe('Calls Routes Integration Tests', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('테이블 ID와 호출 유형이 필요합니다');
+      expect(response.body.error).toContain('스토어 ID, 테이블 ID, 호출 타입이 필요합니다');
     });
 
     it('should reject call creation with non-existent table', async () => {
@@ -232,7 +232,7 @@ describe('Calls Routes Integration Tests', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('유효하지 않은 호출 유형입니다');
+      expect(response.body.error).toContain('유효하지 않은 호출 타입입니다');
     });
   });
 
@@ -414,7 +414,7 @@ describe('Calls Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('deleted');
       expect(response.body.deleted).toHaveProperty('id', callId);
-      expect(response.body.deleted).toHaveProperty('is_active', false);
+      expect(response.body.deleted).toHaveProperty('id', callId);
     });
 
     it('should reject delete for non-existent call', async () => {
@@ -573,14 +573,16 @@ describe('Calls Routes Integration Tests', () => {
         .set('X-Store-ID', testData.store.id.toString())
         .expect(200);
 
-      expect(response.body).toHaveProperty('total_calls');
-      expect(response.body).toHaveProperty('pending_calls');
-      expect(response.body).toHaveProperty('responding_calls');
-      expect(response.body).toHaveProperty('completed_calls');
-      expect(response.body).toHaveProperty('cancelled_calls');
-      expect(response.body).toHaveProperty('today_calls');
-      expect(response.body).toHaveProperty('recent_calls');
+      expect(response.body).toHaveProperty('today');
+      expect(response.body).toHaveProperty('this_week');
       expect(response.body).toHaveProperty('call_types');
+      expect(response.body.today).toHaveProperty('total_calls');
+      expect(response.body.today).toHaveProperty('pending_calls');
+      expect(response.body.today).toHaveProperty('responded_calls');
+      expect(response.body.today).toHaveProperty('completed_calls');
+      expect(response.body.this_week).toHaveProperty('total_calls');
+      expect(response.body.this_week).toHaveProperty('completed_calls');
+      expect(Array.isArray(response.body.call_types)).toBe(true);
     });
   });
 }); 

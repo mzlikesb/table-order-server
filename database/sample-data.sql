@@ -44,9 +44,9 @@ ON CONFLICT DO NOTHING;
 
 -- 샘플 테이블 추가
 INSERT INTO tables (store_id, table_number, name, capacity) VALUES
-(1, 1, '창가 테이블', 4),
-(1, 2, '중앙 테이블', 6),
-(1, 3, '구석 테이블', 2),
-(2, 1, '1번 테이블', 4),
-(2, 2, '2번 테이블', 4)
+(1, 'A1', '창가 테이블', 4),
+(1, 'A2', '중앙 테이블', 6),
+(1, 'A3', '구석 테이블', 2),
+(2, 'B1', '1번 테이블', 4),
+(2, 'B2', '2번 테이블', 4)
 ON CONFLICT (store_id, table_number) DO NOTHING; 

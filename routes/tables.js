@@ -136,7 +136,7 @@ router.post('/',
 
       const result = await pool.query(
         `INSERT INTO tables (store_id, table_number, name, capacity, status)
-         VALUES ($1, $2, $3, COALESCE($4, 4), COALESCE($5, 'available')) RETURNING *`,
+         VALUES ($1, $2::VARCHAR(10), $3, COALESCE($4, 4), COALESCE($5, 'available')) RETURNING *`,
         [storeId, table_number.toString().trim(), name || null, capacity || 4, status || 'available']
       );
 
@@ -230,7 +230,7 @@ router.put('/:id',
 
       const result = await pool.query(
         `UPDATE tables SET
-           table_number = $1,
+           table_number = $1::VARCHAR(10),
            name = $2,
            capacity = COALESCE($3, 4),
            status = COALESCE($4, 'available'),
@@ -302,8 +302,10 @@ router.patch('/:id',
         
         // 테이블 번호는 문자열로 변환
         if (key === 'table_number') {
+          fields.push(`${key} = $${i}::VARCHAR(10)`);
           values.push(req.body[key].toString().trim());
         } else {
+          fields.push(`${key} = $${i}`);
           values.push(req.body[key]);
         }
       }
