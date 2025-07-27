@@ -75,7 +75,15 @@ router.get('/with-menu-count',
       query += ' GROUP BY mc.id ORDER BY mc.sort_order, mc.name';
       
       const result = await pool.query(query, [storeId]);
-      res.json(result.rows);
+      
+      // COUNT 결과를 숫자로 변환
+      const rows = result.rows.map(row => ({
+        ...row,
+        menu_count: parseInt(row.menu_count, 10),
+        active_menu_count: parseInt(row.active_menu_count, 10)
+      }));
+      
+      res.json(rows);
     } catch (e) {
       console.error('메뉴 카테고리 조회 실패:', e);
       res.status(500).json({ error: '메뉴 카테고리 조회 실패' });
