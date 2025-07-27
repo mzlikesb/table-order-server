@@ -6,7 +6,8 @@ const pool = require('../db/connection');
 const { 
   authenticateToken, 
   requireStorePermission, 
-  requireRole 
+  requireRole,
+  authenticateKiosk
 } = require('../middleware/auth');
 
 /**
@@ -837,5 +838,30 @@ router.post('/duplicate',
     }
   }
 );
+
+/**
+ * [GET] /api/menus/kiosk
+ * 키오스크용 메뉴 조회 (테이블별, 간단한 인증)
+ */
+router.get('/kiosk', authenticateKiosk, async (req, res) => {
+  const { storeId } = req.kiosk;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        m.id, m.name, m.description, m.price, m.image_url, m.is_available,
+        mc.name as category_name, mc.sort_order
+      FROM menus m
+      JOIN menu_categories mc ON m.category_id = mc.id
+      WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
+      ORDER BY mc.sort_order, m.name
+    `, [storeId]);
+
+    res.json(result.rows);
+  } catch (e) {
+    console.error('키오스크 메뉴 조회 실패:', e);
+    res.status(500).json({ error: '메뉴 조회 실패' });
+  }
+});
 
 module.exports = router;

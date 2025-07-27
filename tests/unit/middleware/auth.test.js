@@ -7,8 +7,11 @@ const {
   comparePassword,
   authenticateToken,
   requireStorePermission,
-  requireRole
+  requireRole,
+  authenticateKiosk
 } = require('../../mocks/middleware/auth');
+const request = require('supertest');
+const app = require('../../mocks/app');
 
 // Mock Express request, response, next
 const mockRequest = (headers = {}, body = {}, params = {}, query = {}) => ({
@@ -143,6 +146,54 @@ describe('Auth Middleware Unit Tests', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: '유효하지 않은 토큰입니다' });
       expect(mockNext).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('authenticateKiosk', () => {
+    it('should allow request with valid table and store IDs', async () => {
+      app.get('/test', authenticateKiosk, (req, res) => {
+        res.json({ 
+          tableId: req.kiosk.tableId,
+          storeId: req.kiosk.storeId
+        });
+      });
+
+      const response = await request(app)
+        .get('/test')
+        .set('X-Table-ID', '123')
+        .set('X-Store-ID', '456');
+
+      expect(response.status).toBe(200);
+      expect(response.body.tableId).toBe('123');
+      expect(response.body.storeId).toBe('456');
+    });
+
+    it('should reject request without table ID', async () => {
+      app.get('/test', authenticateKiosk, (req, res) => {
+        res.json({ success: true });
+      });
+
+      const response = await request(app)
+        .get('/test')
+        .set('X-Store-ID', '456');
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toContain('테이블 ID와 스토어 ID가 필요합니다');
+    });
+
+    it('should reject request without store ID', async () => {
+      app.get('/test', authenticateKiosk, (req, res) => {
+        res.json({ success: true });
+      });
+
+      const response = await request(app)
+        .get('/test')
+        .set('X-Table-ID', '123');
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toContain('테이블 ID와 스토어 ID가 필요합니다');
     });
   });
 

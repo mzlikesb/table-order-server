@@ -137,6 +137,27 @@ const requireRole = (allowedRoles) => {
   };
 };
 
+/**
+ * 키오스크용 간단한 인증 (테이블 ID + 스토어 ID만 확인)
+ */
+const authenticateKiosk = (req, res, next) => {
+  const tableId = req.headers['x-table-id'];
+  const storeId = req.headers['x-store-id'];
+  
+  if (!tableId || !storeId) {
+    return res.status(400).json({ 
+      error: '테이블 ID와 스토어 ID가 필요합니다' 
+    });
+  }
+  
+  req.kiosk = {
+    tableId: tableId,
+    storeId: storeId
+  };
+  
+  next();
+};
+
 module.exports = {
   generateToken,
   verifyToken,
@@ -144,5 +165,6 @@ module.exports = {
   comparePassword,
   authenticateToken,
   requireStorePermission,
-  requireRole
+  requireRole,
+  authenticateKiosk
 }; 
