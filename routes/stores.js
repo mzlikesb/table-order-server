@@ -123,13 +123,11 @@ router.get('/stats',
           s.is_active,
           COUNT(DISTINCT m.id) as menu_count,
           COUNT(DISTINCT o.id) as order_count,
-          COUNT(DISTINCT t.id) as table_count,
-          COUNT(DISTINCT a.id) as admin_count
+          COUNT(DISTINCT t.id) as table_count
         FROM stores s
         LEFT JOIN menus m ON s.id = m.store_id
         LEFT JOIN orders o ON s.id = o.store_id
         LEFT JOIN tables t ON s.id = t.store_id
-        LEFT JOIN admins a ON s.id = a.store_id
         GROUP BY s.id, s.code, s.name, s.is_active
         ORDER BY s.created_at DESC
       `);
