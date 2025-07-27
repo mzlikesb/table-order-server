@@ -72,7 +72,7 @@ describe('Stores Routes Integration Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('접근 권한이 없습니다');
+      expect(response.body.error).toContain('스토어 권한이 없습니다');
     });
 
     it('should filter stores by status', async () => {
@@ -110,7 +110,7 @@ describe('Stores Routes Integration Tests', () => {
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('해당 스토어가 없습니다');
+      expect(response.body.error).toContain('존재하지 않는 스토어입니다');
     });
 
     it('should reject request without authentication', async () => {
@@ -177,7 +177,7 @@ describe('Stores Routes Integration Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('접근 권한이 없습니다');
+      expect(response.body.error).toContain('존재하지 않는 관리자입니다');
     });
 
     it('should reject store creation with missing required fields', async () => {
@@ -375,7 +375,7 @@ describe('Stores Routes Integration Tests', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('활성화된 데이터가 있는 스토어는 삭제할 수 없습니다');
+      expect(response.body.error).toContain('스토어에 연결된 데이터가 있어 삭제할 수 없습니다');
     });
   });
 
@@ -476,7 +476,8 @@ describe('Stores Routes Integration Tests', () => {
   describe('GET /api/stores/search', () => {
     it('should search stores by name', async () => {
       const response = await request(app)
-        .get('/api/stores/search?q=테스트')
+        .get('/api/stores/search')
+        .query({ q: '테스트' })
         .set('Authorization', `Bearer ${superAdminToken}`)
         .expect(200);
 

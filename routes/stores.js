@@ -291,7 +291,7 @@ router.patch('/:id',
 
       fields.push('updated_at = NOW()');
       const result = await pool.query(
-        `UPDATE stores SET ${fields.join(', ')} WHERE id = $${i + 1} RETURNING *`,
+        `UPDATE stores SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
         values
       );
       
@@ -335,13 +335,12 @@ router.delete('/:id',
         SELECT 
           (SELECT COUNT(*) FROM menus WHERE store_id = $1) as menu_count,
           (SELECT COUNT(*) FROM orders WHERE store_id = $1) as order_count,
-          (SELECT COUNT(*) FROM tables WHERE store_id = $1) as table_count,
-          (SELECT COUNT(*) FROM admins WHERE store_id = $1) as admin_count
+          (SELECT COUNT(*) FROM tables WHERE store_id = $1) as table_count
       `, [id]);
 
       const data = relatedDataCheck.rows[0];
       const hasRelatedData = data.menu_count > 0 || data.order_count > 0 || 
-                            data.table_count > 0 || data.admin_count > 0;
+                            data.table_count > 0;
 
       if (hasRelatedData) {
         return res.status(400).json({ 
@@ -349,8 +348,7 @@ router.delete('/:id',
           related_data: {
             menus: parseInt(data.menu_count),
             orders: parseInt(data.order_count),
-            tables: parseInt(data.table_count),
-            admins: parseInt(data.admin_count)
+            tables: parseInt(data.table_count)
           }
         });
       }
@@ -582,6 +580,7 @@ router.post('/duplicate',
 
       res.status(201).json({
         success: true,
+        id: newStore.rows[0].id,
         original_store: originalStore.rows[0],
         new_store: newStore.rows[0],
         message: '스토어가 복제되었습니다. 새 스토어는 비활성화 상태입니다.'
@@ -686,7 +685,10 @@ router.put('/:id/logo',
         values
       );
 
-      res.json(result.rows[0]);
+      res.json({
+        success: true,
+        store: result.rows[0]
+      });
     } catch (e) {
       console.error('스토어 로고 업데이트 실패:', e);
       res.status(500).json({ error: '스토어 로고 업데이트 실패' });

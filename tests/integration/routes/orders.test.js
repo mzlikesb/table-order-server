@@ -400,7 +400,7 @@ describe('Orders Routes Integration Tests', () => {
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('order');
-      expect(response.body.order).toHaveProperty('total_amount', updateData.total_amount);
+      expect(parseFloat(response.body.order.total_amount)).toBe(updateData.total_amount);
       expect(response.body.order).toHaveProperty('notes', updateData.notes);
     });
 

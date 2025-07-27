@@ -752,8 +752,8 @@ router.post('/bulk-status-update',
 
         const updateQuery = `
           UPDATE orders SET 
-            status = $1, 
-            completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
+            status = $1::VARCHAR(20), 
+            completed_at = CASE WHEN $1::VARCHAR(20) = 'completed' THEN NOW() ELSE completed_at END
           WHERE id IN (${placeholders}) AND store_id = $${order_ids.length + 2}
           RETURNING *
         `;
@@ -823,7 +823,7 @@ router.get('/recent',
         LEFT JOIN stores s ON o.store_id = s.id
         LEFT JOIN order_items oi ON o.id = oi.order_id
         WHERE o.store_id = $1
-        GROUP BY o.id, t.table_number, s.name
+        GROUP BY o.id, o.store_id, o.table_id, o.order_number, o.status, o.total_amount, o.notes, o.created_by, o.completed_at, o.created_at, o.updated_at, t.table_number, s.name
         ORDER BY o.created_at DESC
         LIMIT $2
       `, [storeId, parseInt(limit)]);
@@ -940,6 +940,7 @@ router.post('/duplicate',
         success: true,
         orderId: newOrderId,
         orderNumber: orderNumber,
+        order: newOrder.rows[0],
         original_order: originalOrder.rows[0],
         new_order: newOrder.rows[0],
         copied_items: orderItems.rows.length

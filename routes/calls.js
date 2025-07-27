@@ -783,10 +783,10 @@ router.post('/quick-respond',
 
       const result = await pool.query(`
         UPDATE calls SET 
-          status = $1,
+          status = $1::VARCHAR(20),
           responded_by = $2,
-          responded_at = CASE WHEN $1 = 'responded' THEN NOW() ELSE responded_at END,
-          completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
+          responded_at = CASE WHEN $1::VARCHAR(20) = 'responded' THEN NOW() ELSE responded_at END,
+          completed_at = CASE WHEN $1::VARCHAR(20) = 'completed' THEN NOW() ELSE completed_at END
         WHERE id = $3 AND store_id = $4 
         RETURNING *
       `, [newStatus, adminId, call_id, storeId]);
