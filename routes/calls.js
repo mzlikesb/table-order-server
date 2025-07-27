@@ -58,6 +58,44 @@ router.get('/',
 );
 
 /**
+ * [GET] /api/calls/pending
+ * 대기 중인 호출들만 조회 (직원용 대시보드 - 멀티테넌트)
+ */
+router.get('/pending', 
+  authenticateToken, 
+  requireStorePermission,
+  async (req, res) => {
+    try {
+      const storeId = req.tenant?.storeId;
+      
+      if (!storeId) {
+        return res.status(400).json({ error: 'store_id가 필요합니다' });
+      }
+
+      const result = await pool.query(`
+        SELECT 
+          c.id, c.store_id, c.table_id, c.call_type, c.message, c.status,
+          c.responded_by, c.responded_at, c.completed_at, c.created_at, c.updated_at,
+          t.table_number,
+          s.name as store_name,
+          a.username as responded_by_name
+        FROM calls c
+        JOIN tables t ON c.table_id = t.id
+        JOIN stores s ON c.store_id = s.id
+        LEFT JOIN admins a ON c.responded_by = a.id
+        WHERE c.store_id = $1 AND c.status IN ('pending', 'responded')
+        ORDER BY c.created_at ASC
+      `, [storeId]);
+
+      res.json(result.rows);
+    } catch (e) {
+      console.error('대기 호출 조회 실패:', e);
+      res.status(500).json({ error: '대기 호출 조회 실패' });
+    }
+  }
+);
+
+/**
  * [GET] /api/calls/:id
  * 특정 호출 상세 조회 (멀티테넌트 - 가게별 권한 확인)
  */
@@ -573,44 +611,6 @@ router.get('/status/:status',
     } catch (e) {
       console.error('상태별 호출 조회 실패:', e);
       res.status(500).json({ error: '상태별 호출 조회 실패' });
-    }
-  }
-);
-
-/**
- * [GET] /api/calls/pending
- * 대기 중인 호출들만 조회 (직원용 대시보드 - 멀티테넌트)
- */
-router.get('/pending', 
-  authenticateToken, 
-  requireStorePermission,
-  async (req, res) => {
-    try {
-      const storeId = req.tenant?.storeId;
-      
-      if (!storeId) {
-        return res.status(400).json({ error: 'store_id가 필요합니다' });
-      }
-
-      const result = await pool.query(`
-        SELECT 
-          c.id, c.store_id, c.table_id, c.call_type, c.message, c.status,
-          c.responded_by, c.responded_at, c.completed_at, c.created_at, c.updated_at,
-          t.table_number,
-          s.name as store_name,
-          a.username as responded_by_name
-        FROM calls c
-        JOIN tables t ON c.table_id = t.id
-        JOIN stores s ON c.store_id = s.id
-        LEFT JOIN admins a ON c.responded_by = a.id
-        WHERE c.store_id = $1 AND c.status IN ('pending', 'responded')
-        ORDER BY c.created_at ASC
-      `, [storeId]);
-
-      res.json(result.rows);
-    } catch (e) {
-      console.error('대기 호출 조회 실패:', e);
-      res.status(500).json({ error: '대기 호출 조회 실패' });
     }
   }
 );

@@ -44,6 +44,48 @@ router.get('/',
 );
 
 /**
+ * [GET] /api/stores/search
+ * 스토어 검색 (Super Admin만)
+ */
+router.get('/search', 
+  authenticateToken, 
+  requireRole(['super_admin']),
+  async (req, res) => {
+    const { q, is_active, limit = 20, offset = 0 } = req.query;
+    
+    try {
+      let query = `
+        SELECT 
+          id, code, name, address, phone, timezone, logo_url, small_logo_url, is_active, 
+          created_at, updated_at
+        FROM stores
+        WHERE 1=1
+      `;
+      let params = [];
+      
+      if (q) {
+        query += ` AND (code ILIKE $${params.length + 1} OR name ILIKE $${params.length + 1} OR address ILIKE $${params.length + 1})`;
+        params.push(`%${q}%`);
+      }
+      
+      if (is_active !== undefined) {
+        query += ` AND is_active = $${params.length + 1}`;
+        params.push(is_active === 'true');
+      }
+      
+      query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(parseInt(limit), parseInt(offset));
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (e) {
+      console.error('스토어 검색 실패:', e);
+      res.status(500).json({ error: '스토어 검색 실패' });
+    }
+  }
+);
+
+/**
  * [GET] /api/stores/:id
  * 특정 스토어 상세 조회 (Super Admin만)
  */
@@ -591,48 +633,6 @@ router.post('/duplicate',
       res.status(500).json({ error: '스토어 복제 실패' });
     } finally {
       client.release();
-    }
-  }
-);
-
-/**
- * [GET] /api/stores/search
- * 스토어 검색 (Super Admin만)
- */
-router.get('/search', 
-  authenticateToken, 
-  requireRole(['super_admin']),
-  async (req, res) => {
-    const { q, is_active, limit = 20, offset = 0 } = req.query;
-    
-    try {
-      let query = `
-        SELECT 
-          id, code, name, address, phone, timezone, logo_url, small_logo_url, is_active, 
-          created_at, updated_at
-        FROM stores
-        WHERE 1=1
-      `;
-      let params = [];
-      
-      if (q) {
-        query += ` AND (code ILIKE $${params.length + 1} OR name ILIKE $${params.length + 1} OR address ILIKE $${params.length + 1})`;
-        params.push(`%${q}%`);
-      }
-      
-      if (is_active !== undefined) {
-        query += ` AND is_active = $${params.length + 1}`;
-        params.push(is_active === 'true');
-      }
-      
-      query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-      params.push(parseInt(limit), parseInt(offset));
-      
-      const result = await pool.query(query, params);
-      res.json(result.rows);
-    } catch (e) {
-      console.error('스토어 검색 실패:', e);
-      res.status(500).json({ error: '스토어 검색 실패' });
     }
   }
 );

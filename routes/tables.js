@@ -55,6 +55,60 @@ router.get('/',
 );
 
 /**
+ * [GET] /api/tables/search
+ * 테이블 검색 (멀티테넌트)
+ */
+router.get('/search', 
+  authenticateToken, 
+  requireStorePermission,
+  async (req, res) => {
+    const { q, status, capacity, limit = 20, offset = 0 } = req.query;
+    const storeId = req.tenant?.storeId;
+    
+    if (!storeId) {
+      return res.status(400).json({ error: 'store_id가 필요합니다' });
+    }
+    
+    try {
+      let query = `
+        SELECT 
+          t.id, t.store_id, t.table_number, t.name, t.capacity, 
+          t.status, t.is_active, t.created_at, t.updated_at,
+          s.name as store_name
+        FROM tables t
+        JOIN stores s ON t.store_id = s.id
+        WHERE t.store_id = $1 AND t.is_active = true
+      `;
+      let params = [storeId];
+      
+      if (q) {
+        query += ` AND (t.table_number ILIKE $${params.length + 1} OR t.name ILIKE $${params.length + 1})`;
+        params.push(`%${q}%`);
+      }
+      
+      if (status) {
+        query += ` AND t.status = $${params.length + 1}`;
+        params.push(status);
+      }
+
+      if (capacity) {
+        query += ` AND t.capacity = $${params.length + 1}`;
+        params.push(parseInt(capacity));
+      }
+      
+      query += ` ORDER BY t.table_number LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(parseInt(limit), parseInt(offset));
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (e) {
+      console.error('테이블 검색 실패:', e);
+      res.status(500).json({ error: '테이블 검색 실패' });
+    }
+  }
+);
+
+/**
  * [GET] /api/tables/:id
  * 특정 테이블 정보 조회 (멀티테넌트)
  */
@@ -796,60 +850,6 @@ router.post('/duplicate',
     } catch (e) {
       console.error('테이블 복제 실패:', e);
       res.status(500).json({ error: '테이블 복제 실패' });
-    }
-  }
-);
-
-/**
- * [GET] /api/tables/search
- * 테이블 검색 (멀티테넌트)
- */
-router.get('/search', 
-  authenticateToken, 
-  requireStorePermission,
-  async (req, res) => {
-    const { q, status, capacity, limit = 20, offset = 0 } = req.query;
-    const storeId = req.tenant?.storeId;
-    
-    if (!storeId) {
-      return res.status(400).json({ error: 'store_id가 필요합니다' });
-    }
-    
-    try {
-      let query = `
-        SELECT 
-          t.id, t.store_id, t.table_number, t.name, t.capacity, 
-          t.status, t.is_active, t.created_at, t.updated_at,
-          s.name as store_name
-        FROM tables t
-        JOIN stores s ON t.store_id = s.id
-        WHERE t.store_id = $1 AND t.is_active = true
-      `;
-      let params = [storeId];
-      
-      if (q) {
-        query += ` AND (t.table_number ILIKE $${params.length + 1} OR t.name ILIKE $${params.length + 1})`;
-        params.push(`%${q}%`);
-      }
-      
-      if (status) {
-        query += ` AND t.status = $${params.length + 1}`;
-        params.push(status);
-      }
-
-      if (capacity) {
-        query += ` AND t.capacity = $${params.length + 1}`;
-        params.push(parseInt(capacity));
-      }
-      
-      query += ` ORDER BY t.table_number LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-      params.push(parseInt(limit), parseInt(offset));
-      
-      const result = await pool.query(query, params);
-      res.json(result.rows);
-    } catch (e) {
-      console.error('테이블 검색 실패:', e);
-      res.status(500).json({ error: '테이블 검색 실패' });
     }
   }
 );

@@ -57,6 +57,44 @@ router.get('/',
 );
 
 /**
+ * [GET] /api/orders/recent
+ * 최근 주문 목록 조회 (멀티테넌트)
+ */
+router.get('/recent', 
+  authenticateToken, 
+  requireStorePermission,
+  async (req, res) => {
+    const { limit = 10 } = req.query;
+    const storeId = req.tenant?.storeId;
+    
+    try {
+      const result = await pool.query(`
+        SELECT 
+          o.id, o.store_id, o.table_id, o.order_number, o.status, 
+          o.total_amount, o.notes, o.created_by, o.completed_at,
+          o.created_at, o.updated_at,
+          t.table_number,
+          s.name as store_name,
+          COUNT(oi.id) as item_count
+        FROM orders o
+        LEFT JOIN tables t ON o.table_id = t.id
+        LEFT JOIN stores s ON o.store_id = s.id
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.store_id = $1
+        GROUP BY o.id, o.store_id, o.table_id, o.order_number, o.status, o.total_amount, o.notes, o.created_by, o.completed_at, o.created_at, o.updated_at, t.table_number, s.name
+        ORDER BY o.created_at DESC
+        LIMIT $2
+      `, [storeId, parseInt(limit)]);
+
+      res.json(result.rows);
+    } catch (e) {
+      console.error('최근 주문 조회 실패:', e);
+      res.status(500).json({ error: '최근 주문 조회 실패' });
+    }
+  }
+);
+
+/**
  * [GET] /api/orders/:id
  * 특정 주문 상세 조회 (주문 아이템 포함 - 멀티테넌트)
  */
@@ -794,44 +832,6 @@ router.post('/bulk-status-update',
     } catch (e) {
       console.error('주문 상태 일괄 변경 실패:', e);
       res.status(500).json({ error: '주문 상태 일괄 변경 실패' });
-    }
-  }
-);
-
-/**
- * [GET] /api/orders/recent
- * 최근 주문 목록 조회 (멀티테넌트)
- */
-router.get('/recent', 
-  authenticateToken, 
-  requireStorePermission,
-  async (req, res) => {
-    const { limit = 10 } = req.query;
-    const storeId = req.tenant?.storeId;
-    
-    try {
-      const result = await pool.query(`
-        SELECT 
-          o.id, o.store_id, o.table_id, o.order_number, o.status, 
-          o.total_amount, o.notes, o.created_by, o.completed_at,
-          o.created_at, o.updated_at,
-          t.table_number,
-          s.name as store_name,
-          COUNT(oi.id) as item_count
-        FROM orders o
-        LEFT JOIN tables t ON o.table_id = t.id
-        LEFT JOIN stores s ON o.store_id = s.id
-        LEFT JOIN order_items oi ON o.id = oi.order_id
-        WHERE o.store_id = $1
-        GROUP BY o.id, o.store_id, o.table_id, o.order_number, o.status, o.total_amount, o.notes, o.created_by, o.completed_at, o.created_at, o.updated_at, t.table_number, s.name
-        ORDER BY o.created_at DESC
-        LIMIT $2
-      `, [storeId, parseInt(limit)]);
-
-      res.json(result.rows);
-    } catch (e) {
-      console.error('최근 주문 조회 실패:', e);
-      res.status(500).json({ error: '최근 주문 조회 실패' });
     }
   }
 );
