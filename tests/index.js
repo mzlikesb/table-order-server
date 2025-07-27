@@ -44,7 +44,8 @@ const socketHelpers = {
   notifyOrderStatusChange: jest.fn(),
   notifyNewCall: jest.fn(),
   notifyCallStatusChange: jest.fn(),
-  notifyTableStatusChange: jest.fn()
+  notifyTableStatusChange: jest.fn(),
+  notifyTableOrderUpdate: jest.fn()
 };
 app.set('socketHelpers', socketHelpers);
 

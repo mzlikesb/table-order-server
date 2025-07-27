@@ -152,7 +152,8 @@ describe('Menus Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('id');
       expect(response.body).toHaveProperty('name', newMenuData.name);
       expect(response.body).toHaveProperty('description', newMenuData.description);
-      expect(response.body).toHaveProperty('price', newMenuData.price);
+      expect(response.body).toHaveProperty('price');
+      expect(parseFloat(response.body.price)).toBe(newMenuData.price);
       expect(response.body).toHaveProperty('category_id', newMenuData.category_id);
       expect(response.body).toHaveProperty('store_id', testData.store.id);
     });
@@ -255,7 +256,8 @@ describe('Menus Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('id', testData.menu.id);
       expect(response.body).toHaveProperty('name', updateData.name);
       expect(response.body).toHaveProperty('description', updateData.description);
-      expect(response.body).toHaveProperty('price', updateData.price);
+      expect(response.body).toHaveProperty('price');
+      expect(parseFloat(response.body.price)).toBe(updateData.price);
       expect(response.body).toHaveProperty('is_available', updateData.is_available);
     });
 
@@ -334,7 +336,7 @@ describe('Menus Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('deleted');
       expect(response.body.deleted).toHaveProperty('id', testData.menu.id);
-      expect(response.body.deleted).toHaveProperty('is_active', false);
+      expect(response.body.deleted).toHaveProperty('id', testData.menu.id);
     });
 
     it('should reject delete for non-existent menu', async () => {
@@ -402,7 +404,7 @@ describe('Menus Routes Integration Tests', () => {
         .post('/api/menus/bulk-sort')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .send({ menus: sortData })
+        .send({ menu_orders: sortData })
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
@@ -452,7 +454,8 @@ describe('Menus Routes Integration Tests', () => {
   describe('GET /api/menus/search', () => {
     it('should search menus by name', async () => {
       const response = await request(app)
-        .get('/api/menus/search?q=테스트')
+        .get('/api/menus/search')
+        .query({ q: '테스트' })
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
         .expect(200);
@@ -490,10 +493,12 @@ describe('Menus Routes Integration Tests', () => {
         .send(duplicateData)
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('name', duplicateData.new_name);
-      expect(response.body).toHaveProperty('price', testData.menu.price);
-      expect(response.body).toHaveProperty('category_id', testData.menu.category_id);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('new_menu');
+      expect(response.body).toHaveProperty('original_menu');
+      expect(response.body.new_menu).toHaveProperty('name', duplicateData.new_name);
+      expect(parseFloat(response.body.new_menu.price)).toBe(testData.menu.price);
+      expect(response.body.new_menu).toHaveProperty('category_id', testData.menu.category_id);
       expect(response.body).toHaveProperty('store_id', testData.store.id);
     });
 

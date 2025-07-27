@@ -11,18 +11,14 @@ const {
 
 /**
  * [GET] /api/menus
- * 메뉴 전체 조회 (멀티테넌트 - 가게별 필터링)
+ * 메뉴 전체 목록 조회 (멀티테넌트 - 가게별 필터링)
  */
 router.get('/', 
   authenticateToken, 
   requireStorePermission,
   async (req, res) => {
-    const { store_id, category_id, include_unavailable = false, limit = 100, offset = 0 } = req.query;
-    const storeId = store_id || req.tenant?.storeId;
-    
-    if (!storeId) {
-      return res.status(400).json({ error: 'store_id가 필요합니다' });
-    }
+    const { category_id, is_available, limit = 50, offset = 0 } = req.query;
+    const storeId = req.tenant?.storeId;
     
     try {
       let query = `
@@ -32,20 +28,21 @@ router.get('/',
           m.created_at, m.updated_at,
           mc.name as category_name,
           s.name as store_name
-        FROM menus m 
+        FROM menus m
         LEFT JOIN menu_categories mc ON m.category_id = mc.id
         JOIN stores s ON m.store_id = s.id
         WHERE m.store_id = $1
       `;
       let params = [storeId];
       
-      if (!include_unavailable) {
-        query += ' AND m.is_available = true';
-      }
-      
       if (category_id) {
         query += ' AND m.category_id = $' + (params.length + 1);
-        params.push(category_id);
+        params.push(parseInt(category_id));
+      }
+      
+      if (is_available !== undefined) {
+        query += ' AND m.is_available = $' + (params.length + 1);
+        params.push(is_available === 'true');
       }
       
       query += ' ORDER BY mc.sort_order, m.sort_order, m.name LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
@@ -56,6 +53,119 @@ router.get('/',
     } catch (e) {
       console.error('메뉴 조회 실패:', e);
       res.status(500).json({ error: '메뉴 조회 실패' });
+    }
+  }
+);
+
+/**
+ * [GET] /api/menus/search
+ * 메뉴 검색 (멀티테넌트)
+ */
+router.get('/search', 
+  authenticateToken, 
+  requireStorePermission,
+  async (req, res) => {
+    const { q, category_id, min_price, max_price, is_available, limit = 50, offset = 0 } = req.query;
+    const storeId = req.tenant?.storeId;
+    
+    if (!q || !q.trim()) {
+      return res.status(400).json({ error: '검색어가 필요합니다' });
+    }
+    
+    try {
+      let query = `
+        SELECT 
+          m.id, m.store_id, m.category_id, m.name, m.description, 
+          m.price, m.image_url, m.is_available, m.sort_order, 
+          m.created_at, m.updated_at,
+          mc.name as category_name,
+          s.name as store_name
+        FROM menus m
+        LEFT JOIN menu_categories mc ON m.category_id = mc.id
+        JOIN stores s ON m.store_id = s.id
+        WHERE m.store_id = $1 AND (m.name ILIKE $2 OR m.description ILIKE $2)
+      `;
+      let params = [storeId, `%${q.trim()}%`];
+      
+      if (category_id) {
+        query += ' AND m.category_id = $' + (params.length + 1);
+        params.push(parseInt(category_id));
+      }
+      
+      if (is_available !== undefined) {
+        query += ' AND m.is_available = $' + (params.length + 1);
+        params.push(is_available === 'true');
+      }
+      
+      if (min_price) {
+        query += ' AND m.price >= $' + (params.length + 1);
+        params.push(parseFloat(min_price));
+      }
+      
+      if (max_price) {
+        query += ' AND m.price <= $' + (params.length + 1);
+        params.push(parseFloat(max_price));
+      }
+      
+      query += ` ORDER BY m.sort_order, m.name LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(parseInt(limit), parseInt(offset));
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (e) {
+      console.error('메뉴 검색 실패:', e);
+      res.status(500).json({ error: '메뉴 검색 실패' });
+    }
+  }
+);
+
+/**
+ * [GET] /api/menus/stats
+ * 메뉴 통계 (멀티테넌트)
+ */
+router.get('/stats', 
+  authenticateToken, 
+  requireStorePermission,
+  async (req, res) => {
+    const storeId = req.tenant?.storeId;
+    
+    try {
+      // 전체 메뉴 통계
+      const totalStats = await pool.query(`
+        SELECT 
+          COUNT(*) as total_menus,
+          COUNT(CASE WHEN is_available = true THEN 1 END) as available_menus,
+          COUNT(CASE WHEN is_available = false THEN 1 END) as unavailable_menus,
+          COUNT(CASE WHEN image_url IS NOT NULL THEN 1 END) as menus_with_images,
+          AVG(price) as avg_price,
+          MIN(price) as min_price,
+          MAX(price) as max_price
+        FROM menus 
+        WHERE store_id = $1
+      `, [storeId]);
+
+      // 카테고리별 메뉴 통계
+      const categoryStats = await pool.query(`
+        SELECT 
+          mc.id,
+          mc.name as category_name,
+          COUNT(m.id) as menu_count,
+          COUNT(CASE WHEN m.is_available = true THEN 1 END) as available_count,
+          AVG(m.price) as avg_price
+        FROM menu_categories mc
+        LEFT JOIN menus m ON mc.id = m.category_id AND m.store_id = mc.store_id
+        WHERE mc.store_id = $1 AND mc.is_active = true
+        GROUP BY mc.id, mc.name
+        ORDER BY mc.sort_order, mc.name
+      `, [storeId]);
+
+      res.json({
+        ...totalStats.rows[0],
+        categories: categoryStats.rows
+      });
+    } catch (e) {
+      console.error('메뉴 통계 조회 실패:', e);
+      res.status(500).json({ error: '메뉴 통계 조회 실패' });
     }
   }
 );
@@ -636,7 +746,7 @@ router.post('/bulk-status',
       }
 
       const result = await pool.query(
-        `UPDATE menus SET is_available = $1, updated_at = NOW() 
+        `UPDATE menus SET is_available = $1::BOOLEAN, updated_at = NOW() 
          WHERE id IN (${placeholders}) AND store_id = $${menu_ids.length + 2}
          RETURNING *`,
         [is_available, ...menu_ids, storeId]
@@ -650,64 +760,6 @@ router.post('/bulk-status',
     } catch (e) {
       console.error('메뉴 상태 일괄 변경 실패:', e);
       res.status(500).json({ error: '메뉴 상태 일괄 변경 실패' });
-    }
-  }
-);
-
-/**
- * [GET] /api/menus/search
- * 메뉴 검색 (멀티테넌트)
- */
-router.get('/search', 
-  authenticateToken, 
-  requireStorePermission,
-  async (req, res) => {
-    const { q, category_id, min_price, max_price, limit = 20, offset = 0 } = req.query;
-    const storeId = req.tenant?.storeId;
-    
-    try {
-      let query = `
-        SELECT 
-          m.id, m.store_id, m.category_id, m.name, m.description, 
-          m.price, m.image_url, m.is_available, m.sort_order, 
-          m.created_at, m.updated_at,
-          mc.name as category_name,
-          s.name as store_name
-        FROM menus m
-        LEFT JOIN menu_categories mc ON m.category_id = mc.id
-        JOIN stores s ON m.store_id = s.id
-        WHERE m.store_id = $1 AND m.is_available = true
-      `;
-      let params = [storeId];
-      
-      if (q) {
-        query += ` AND (m.name ILIKE $${params.length + 1} OR m.description ILIKE $${params.length + 1})`;
-        params.push(`%${q}%`);
-      }
-      
-      if (category_id) {
-        query += ` AND m.category_id = $${params.length + 1}`;
-        params.push(category_id);
-      }
-      
-      if (min_price) {
-        query += ` AND m.price >= $${params.length + 1}`;
-        params.push(parseFloat(min_price));
-      }
-      
-      if (max_price) {
-        query += ` AND m.price <= $${params.length + 1}`;
-        params.push(parseFloat(max_price));
-      }
-      
-      query += ` ORDER BY m.sort_order, m.name LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-      params.push(parseInt(limit), parseInt(offset));
-      
-      const result = await pool.query(query, params);
-      res.json(result.rows);
-    } catch (e) {
-      console.error('메뉴 검색 실패:', e);
-      res.status(500).json({ error: '메뉴 검색 실패' });
     }
   }
 );
@@ -774,82 +826,6 @@ router.post('/duplicate',
     } catch (e) {
       console.error('메뉴 복제 실패:', e);
       res.status(500).json({ error: '메뉴 복제 실패' });
-    }
-  }
-);
-
-/**
- * [GET] /api/menus/stats
- * 메뉴 통계 (멀티테넌트)
- */
-router.get('/stats', 
-  authenticateToken, 
-  requireStorePermission,
-  async (req, res) => {
-    const storeId = req.tenant?.storeId;
-    
-    try {
-      // 전체 메뉴 통계
-      const totalStats = await pool.query(`
-        SELECT 
-          COUNT(*) as total_menus,
-          COUNT(CASE WHEN is_available = true THEN 1 END) as available_menus,
-          COUNT(CASE WHEN is_available = false THEN 1 END) as unavailable_menus,
-          COUNT(CASE WHEN image_url IS NOT NULL THEN 1 END) as menus_with_images,
-          AVG(price) as avg_price,
-          MIN(price) as min_price,
-          MAX(price) as max_price
-        FROM menus 
-        WHERE store_id = $1
-      `, [storeId]);
-
-      // 카테고리별 메뉴 통계
-      const categoryStats = await pool.query(`
-        SELECT 
-          mc.id,
-          mc.name as category_name,
-          COUNT(m.id) as menu_count,
-          COUNT(CASE WHEN m.is_available = true THEN 1 END) as available_count,
-          AVG(m.price) as avg_price
-        FROM menu_categories mc
-        LEFT JOIN menus m ON mc.id = m.category_id AND m.store_id = mc.store_id
-        WHERE mc.store_id = $1 AND mc.is_active = true
-        GROUP BY mc.id, mc.name
-        ORDER BY mc.sort_order, mc.name
-      `, [storeId]);
-
-      // 가격대별 메뉴 통계
-      const priceRangeStats = await pool.query(`
-        SELECT 
-          CASE 
-            WHEN price < 10000 THEN '1만원 미만'
-            WHEN price < 20000 THEN '1-2만원'
-            WHEN price < 30000 THEN '2-3만원'
-            WHEN price < 50000 THEN '3-5만원'
-            ELSE '5만원 이상'
-          END as price_range,
-          COUNT(*) as menu_count
-        FROM menus 
-        WHERE store_id = $1 AND is_available = true
-        GROUP BY price_range
-        ORDER BY 
-          CASE price_range
-            WHEN '1만원 미만' THEN 1
-            WHEN '1-2만원' THEN 2
-            WHEN '2-3만원' THEN 3
-            WHEN '3-5만원' THEN 4
-            ELSE 5
-          END
-      `, [storeId]);
-
-      res.json({
-        total: totalStats.rows[0],
-        by_category: categoryStats.rows,
-        by_price_range: priceRangeStats.rows
-      });
-    } catch (e) {
-      console.error('메뉴 통계 조회 실패:', e);
-      res.status(500).json({ error: '메뉴 통계 조회 실패' });
     }
   }
 );

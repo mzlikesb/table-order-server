@@ -309,11 +309,14 @@ router.patch('/:id/status',
           // 해당 테이블 고객에게도 알림 (주문 완료, 서빙 완료 등)
           if (status === 'ready' || status === 'preparing') {
             if (updatedOrder.table_id) {
-              socketHelpers.notifyTableOrderUpdate(updatedOrder.table_id, {
+              socketHelpers.notifyOrderStatusChange(storeId, {
                 orderId: id,
                 orderNumber: updatedOrder.order_number,
+                tableId: updatedOrder.table_id,
+                tableNumber: updatedOrder.table_number,
                 status: status,
-                message: status === 'preparing' ? '주문이 조리 중입니다' : '주문이 완료되었습니다'
+                message: status === 'preparing' ? '주문이 조리 중입니다' : '주문이 완료되었습니다',
+                updatedAt: new Date()
               });
             }
           }

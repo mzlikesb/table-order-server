@@ -362,9 +362,9 @@ router.patch('/:id',
         }
       }
 
-      fields.push('updated_at = NOW()');
+      fields.push(`updated_at = NOW()`);
       const result = await pool.query(
-        `UPDATE tables SET ${fields.join(', ')} WHERE id = $${i + 1} AND store_id = $${i + 2} RETURNING *`,
+        `UPDATE tables SET ${fields.join(', ')} WHERE id = $${i} AND store_id = $${i + 1} RETURNING *`,
         values
       );
       
