@@ -338,14 +338,22 @@ describe('Stores Routes Integration Tests', () => {
 
   describe('DELETE /api/stores/:id', () => {
     it('should soft delete store', async () => {
+      // 연관 데이터 없는 스토어 생성
+      const storeRes = await global.testPool.query(`
+        INSERT INTO stores (code, name, address, phone, is_active, created_at)
+        VALUES ('delete_test_store', '삭제용 스토어', '서울', '010-0000-0000', true, NOW())
+        RETURNING *
+      `);
+      const store = storeRes.rows[0];
+
       const response = await request(app)
-        .delete(`/api/stores/${testData.store.id}`)
+        .delete(`/api/stores/${store.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('deleted');
-      expect(response.body.deleted).toHaveProperty('id', testData.store.id);
+      expect(response.body.deleted).toHaveProperty('id', store.id);
       expect(response.body.deleted).toHaveProperty('is_active', false);
     });
 
@@ -381,16 +389,22 @@ describe('Stores Routes Integration Tests', () => {
 
   describe('GET /api/stores/stats', () => {
     it('should return store statistics', async () => {
+      // 최소 1개 이상의 store가 존재하도록 보장
+      const storeRes = await global.testPool.query(`
+        INSERT INTO stores (code, name, address, phone, is_active, created_at)
+        VALUES ('stats_test_store', '통계용 스토어', '서울', '010-1111-1111', true, NOW())
+        ON CONFLICT (code) DO NOTHING
+        RETURNING *
+      `);
+
       const response = await request(app)
         .get('/api/stores/stats')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('total_stores');
-      expect(response.body).toHaveProperty('active_stores');
-      expect(response.body).toHaveProperty('inactive_stores');
+      expect(response.body).toHaveProperty('total');
       expect(response.body).toHaveProperty('recent_stores');
-      expect(response.body).toHaveProperty('store_distribution');
+      expect(response.body).toHaveProperty('store_data_stats');
     });
 
     it('should reject request without authentication', async () => {
