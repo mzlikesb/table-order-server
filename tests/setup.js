@@ -77,6 +77,14 @@ global.createTestData = async () => {
     `);
     const testAdmin = adminResult.rows[0];
 
+    // 테스트 슈퍼 관리자 생성
+    const superAdminResult = await global.testPool.query(`
+      INSERT INTO admins (username, email, password_hash, is_super_admin) 
+      VALUES ('super_admin', 'super@example.com', '$2b$10$test_hash', true) 
+      RETURNING *
+    `);
+    const testSuperAdmin = superAdminResult.rows[0];
+
     // 관리자-스토어 권한 생성
     await global.testPool.query(`
       INSERT INTO admin_store_permissions (admin_id, store_id, role) 
@@ -110,6 +118,7 @@ global.createTestData = async () => {
     return {
       store: testStore,
       admin: testAdmin,
+      superAdmin: testSuperAdmin,
       table: testTable,
       category: testCategory,
       menu: testMenu
