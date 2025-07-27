@@ -737,6 +737,8 @@ router.post('/bulk-status',
     }
 
     try {
+      console.log('bulk-status debug:', { menu_ids, is_available, storeId });
+      
       // 메뉴들이 해당 스토어에 속하는지 확인
       const placeholders = menu_ids.map((_, index) => `$${index + 1}`).join(',');
       const checkQuery = `SELECT id FROM menus WHERE id IN (${placeholders}) AND store_id = $${menu_ids.length + 1}`;
@@ -746,9 +748,13 @@ router.post('/bulk-status',
         return res.status(400).json({ error: '일부 메뉴가 해당 가게에 속하지 않습니다' });
       }
 
+      const updatePlaceholders = menu_ids.map((_, index) => `$${index + 2}`).join(',');
+      console.log('updatePlaceholders:', updatePlaceholders);
+      console.log('params:', [Boolean(is_available), ...menu_ids, storeId]);
+      
       const result = await pool.query(
         `UPDATE menus SET is_available = $1, updated_at = NOW() 
-         WHERE id IN (${placeholders}) AND store_id = $${menu_ids.length + 2}
+         WHERE id IN (${updatePlaceholders}) AND store_id = $${menu_ids.length + 2}
          RETURNING *`,
         [Boolean(is_available), ...menu_ids, storeId]
       );

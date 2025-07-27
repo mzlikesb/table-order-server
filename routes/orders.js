@@ -796,7 +796,7 @@ router.post('/bulk-status-update',
           WHERE id IN (${updatePlaceholders}) AND store_id = $${order_ids.length + 2}
           RETURNING *
         `;
-        const result = await client.query(updateQuery, [new_status, ...order_ids, storeId]);
+        const result = await client.query(updateQuery, [String(new_status), ...order_ids, storeId]);
 
         await client.query('COMMIT');
 

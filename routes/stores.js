@@ -86,6 +86,67 @@ router.get('/search',
 );
 
 /**
+ * [GET] /api/stores/stats
+ * 스토어 통계 (Super Admin만)
+ */
+router.get('/stats', 
+  authenticateToken, 
+  requireRole(['super_admin']),
+  async (req, res) => {
+    try {
+      // 전체 스토어 통계
+      const totalStats = await pool.query(`
+        SELECT 
+          COUNT(*) as total_stores,
+          COUNT(CASE WHEN is_active = true THEN 1 END) as active_stores,
+          COUNT(CASE WHEN is_active = false THEN 1 END) as inactive_stores,
+          COUNT(CASE WHEN logo_url IS NOT NULL THEN 1 END) as stores_with_logos
+        FROM stores
+      `);
+
+      // 최근 생성된 스토어 (최근 30일)
+      const recentStores = await pool.query(`
+        SELECT 
+          id, code, name, created_at
+        FROM stores 
+        WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+        ORDER BY created_at DESC
+        LIMIT 10
+      `);
+
+      // 스토어별 데이터 통계
+      const storeDataStats = await pool.query(`
+        SELECT 
+          s.id,
+          s.code,
+          s.name,
+          s.is_active,
+          COUNT(DISTINCT m.id) as menu_count,
+          COUNT(DISTINCT o.id) as order_count,
+          COUNT(DISTINCT t.id) as table_count,
+          COUNT(DISTINCT a.id) as admin_count
+        FROM stores s
+        LEFT JOIN menus m ON s.id = m.store_id
+        LEFT JOIN orders o ON s.id = o.store_id
+        LEFT JOIN tables t ON s.id = t.store_id
+        LEFT JOIN admins a ON s.id = a.store_id
+        GROUP BY s.id, s.code, s.name, s.is_active
+        ORDER BY s.created_at DESC
+      `);
+
+      res.json({
+        total: totalStats.rows[0],
+        recent_stores: recentStores.rows,
+        store_data_stats: storeDataStats.rows
+      });
+    } catch (e) {
+      console.error('스토어 통계 조회 실패:', e);
+      res.status(500).json({ error: '스토어 통계 조회 실패' });
+    }
+  }
+);
+
+/**
  * [GET] /api/stores/:id
  * 특정 스토어 상세 조회 (Super Admin만)
  */
@@ -446,67 +507,6 @@ router.get('/code/:code',
 );
 
 /**
- * [GET] /api/stores/stats
- * 스토어 통계 (Super Admin만)
- */
-router.get('/stats', 
-  authenticateToken, 
-  requireRole(['super_admin']),
-  async (req, res) => {
-    try {
-      // 전체 스토어 통계
-      const totalStats = await pool.query(`
-        SELECT 
-          COUNT(*) as total_stores,
-          COUNT(CASE WHEN is_active = true THEN 1 END) as active_stores,
-          COUNT(CASE WHEN is_active = false THEN 1 END) as inactive_stores,
-          COUNT(CASE WHEN logo_url IS NOT NULL THEN 1 END) as stores_with_logos
-        FROM stores
-      `);
-
-      // 최근 생성된 스토어 (최근 30일)
-      const recentStores = await pool.query(`
-        SELECT 
-          id, code, name, created_at
-        FROM stores 
-        WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-        ORDER BY created_at DESC
-        LIMIT 10
-      `);
-
-      // 스토어별 데이터 통계
-      const storeDataStats = await pool.query(`
-        SELECT 
-          s.id,
-          s.code,
-          s.name,
-          s.is_active,
-          COUNT(DISTINCT m.id) as menu_count,
-          COUNT(DISTINCT o.id) as order_count,
-          COUNT(DISTINCT t.id) as table_count,
-          COUNT(DISTINCT a.id) as admin_count
-        FROM stores s
-        LEFT JOIN menus m ON s.id = m.store_id
-        LEFT JOIN orders o ON s.id = o.store_id
-        LEFT JOIN tables t ON s.id = t.store_id
-        LEFT JOIN admins a ON s.id = a.store_id
-        GROUP BY s.id, s.code, s.name, s.is_active
-        ORDER BY s.created_at DESC
-      `);
-
-      res.json({
-        total: totalStats.rows[0],
-        recent_stores: recentStores.rows,
-        store_data_stats: storeDataStats.rows
-      });
-    } catch (e) {
-      console.error('스토어 통계 조회 실패:', e);
-      res.status(500).json({ error: '스토어 통계 조회 실패' });
-    }
-  }
-);
-
-/**
  * [POST] /api/stores/bulk-status
  * 스토어 상태 일괄 변경 (Super Admin만)
  * Body: { store_ids: [1, 2, 3], is_active: true }
@@ -531,7 +531,7 @@ router.post('/bulk-status',
         `UPDATE stores SET is_active = $1, updated_at = NOW() 
          WHERE id IN (${placeholders})
          RETURNING *`,
-        [is_active, ...store_ids]
+        [Boolean(is_active), ...store_ids]
       );
 
       res.json({ 
