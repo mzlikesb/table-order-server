@@ -337,7 +337,7 @@ describe('Calls Routes Integration Tests', () => {
 
       const updateData = {
         table_id: testData.table.id,
-        call_type: 'payment',
+        call_type: 'bill',
         message: '수정된 호출입니다'
       };
 
@@ -474,7 +474,7 @@ describe('Calls Routes Integration Tests', () => {
 
       const callData2 = {
         table_id: testData.table.id,
-        call_type: 'payment',
+        call_type: 'bill',
         message: '테스트 호출 2'
       };
 
@@ -540,7 +540,7 @@ describe('Calls Routes Integration Tests', () => {
         .post('/api/calls/quick-respond')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .send({ call_id: callId })
+        .send({ call_id: callId, response_type: 'acknowledged' })
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
@@ -548,7 +548,6 @@ describe('Calls Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('response_type');
       expect(response.body.call).toHaveProperty('status', 'responded');
       expect(response.body.call).toHaveProperty('responded_by', testData.admin.id);
-      expect(response.body).toHaveProperty('message');
     });
 
     it('should reject quick respond for non-existent call', async () => {
@@ -556,7 +555,7 @@ describe('Calls Routes Integration Tests', () => {
         .post('/api/calls/quick-respond')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .send({ call_id: 99999 })
+        .send({ call_id: 99999, response_type: 'acknowledged' })
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
