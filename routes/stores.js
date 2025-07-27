@@ -526,10 +526,10 @@ router.post('/bulk-status',
     }
 
     try {
-      const placeholders = store_ids.map((_, index) => `$${index + 1}`).join(',');
+      const updatePlaceholders = store_ids.map((_, index) => `$${index + 2}`).join(',');
       const result = await pool.query(
         `UPDATE stores SET is_active = $1, updated_at = NOW() 
-         WHERE id IN (${placeholders})
+         WHERE id IN (${updatePlaceholders})
          RETURNING *`,
         [Boolean(is_active), ...store_ids]
       );

@@ -775,6 +775,8 @@ router.post('/bulk-status-update',
     }
 
     try {
+      console.log('orders bulk-status debug:', { order_ids, new_status, storeId });
+      
       // 주문들이 해당 스토어에 속하는지 확인
       const placeholders = order_ids.map((_, index) => `$${index + 1}`).join(',');
       const checkQuery = `SELECT id FROM orders WHERE id IN (${placeholders}) AND store_id = $${order_ids.length + 1}`;
@@ -791,12 +793,15 @@ router.post('/bulk-status-update',
         const updatePlaceholders = order_ids.map((_, index) => `$${index + 2}`).join(',');
         const updateQuery = `
           UPDATE orders SET 
-            status = $1, 
-            completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
+            status = $1::VARCHAR(20), 
+            completed_at = CASE WHEN $1::VARCHAR(20) = 'completed' THEN NOW() ELSE completed_at END
           WHERE id IN (${updatePlaceholders}) AND store_id = $${order_ids.length + 2}
           RETURNING *
         `;
-        const result = await client.query(updateQuery, [String(new_status), ...order_ids, storeId]);
+        console.log('updatePlaceholders:', updatePlaceholders);
+        console.log('params:', [new_status.toString(), ...order_ids, storeId]);
+        
+        const result = await client.query(updateQuery, [new_status.toString(), ...order_ids, storeId]);
 
         await client.query('COMMIT');
 
