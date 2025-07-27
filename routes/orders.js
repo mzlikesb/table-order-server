@@ -326,7 +326,10 @@ router.patch('/:id/status',
         // Socket.IO 오류는 주문 상태 변경을 막지 않음
       }
 
-      res.json(updatedOrder);
+      res.json({
+        success: true,
+        order: updatedOrder
+      });
     } catch (e) {
       console.error('주문 상태 변경 실패:', e);
       
@@ -433,7 +436,10 @@ router.put('/:id',
       }
 
       await client.query('COMMIT');
-      res.json(orderResult.rows[0]);
+      res.json({
+        success: true,
+        order: orderResult.rows[0]
+      });
 
     } catch (e) {
       await client.query('ROLLBACK');
@@ -813,8 +819,8 @@ router.get('/recent',
           s.name as store_name,
           COUNT(oi.id) as item_count
         FROM orders o
-        JOIN tables t ON o.table_id = t.id
-        JOIN stores s ON o.store_id = s.id
+        LEFT JOIN tables t ON o.table_id = t.id
+        LEFT JOIN stores s ON o.store_id = s.id
         LEFT JOIN order_items oi ON o.id = oi.order_id
         WHERE o.store_id = $1
         GROUP BY o.id, t.table_number, s.name
@@ -932,6 +938,8 @@ router.post('/duplicate',
 
       res.status(201).json({
         success: true,
+        orderId: newOrderId,
+        orderNumber: orderNumber,
         original_order: originalOrder.rows[0],
         new_order: newOrder.rows[0],
         copied_items: orderItems.rows.length

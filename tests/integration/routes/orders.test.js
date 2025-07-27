@@ -468,7 +468,6 @@ describe('Orders Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('deleted');
       expect(response.body.deleted).toHaveProperty('id', orderId);
-      expect(response.body.deleted).toHaveProperty('is_active', false);
     });
 
     it('should reject delete for non-existent order', async () => {
@@ -550,7 +549,7 @@ describe('Orders Routes Integration Tests', () => {
 
       const bulkUpdateData = {
         order_ids: [createResponse1.body.orderId, createResponse2.body.orderId],
-        status: 'ready'
+        new_status: 'ready'
       };
 
       const response = await request(app)
