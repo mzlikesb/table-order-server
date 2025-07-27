@@ -747,7 +747,7 @@ router.post('/bulk-status',
       }
 
       const result = await pool.query(
-        `UPDATE menus SET is_available = $1, updated_at = NOW() 
+        `UPDATE menus SET is_available = $1::BOOLEAN, updated_at = NOW() 
          WHERE id IN (${placeholders}) AND store_id = $${menu_ids.length + 2}
          RETURNING *`,
         [Boolean(is_available), ...menu_ids, storeId]

@@ -790,8 +790,8 @@ router.post('/bulk-status-update',
 
         const updateQuery = `
           UPDATE orders SET 
-            status = $1::VARCHAR(20), 
-            completed_at = CASE WHEN $1::VARCHAR(20) = 'completed' THEN NOW() ELSE completed_at END
+            status = $1, 
+            completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
           WHERE id IN (${placeholders}) AND store_id = $${order_ids.length + 2}
           RETURNING *
         `;
