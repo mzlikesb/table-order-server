@@ -161,6 +161,7 @@ router.get('/stats',
 
       res.json({
         ...totalStats.rows[0],
+        categories_count: categoryStats.rows.length,
         categories: categoryStats.rows
       });
     } catch (e) {
@@ -821,7 +822,8 @@ router.post('/duplicate',
       res.status(201).json({
         success: true,
         original_menu: originalMenu.rows[0],
-        new_menu: result.rows[0]
+        new_menu: result.rows[0],
+        store_id: storeId
       });
     } catch (e) {
       console.error('메뉴 복제 실패:', e);

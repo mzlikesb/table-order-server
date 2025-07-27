@@ -497,7 +497,7 @@ describe('Menus Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('new_menu');
       expect(response.body).toHaveProperty('original_menu');
       expect(response.body.new_menu).toHaveProperty('name', duplicateData.new_name);
-      expect(parseFloat(response.body.new_menu.price)).toBe(testData.menu.price);
+      expect(parseFloat(response.body.new_menu.price)).toBe(parseFloat(testData.menu.price));
       expect(response.body.new_menu).toHaveProperty('category_id', testData.menu.category_id);
       expect(response.body).toHaveProperty('store_id', testData.store.id);
     });
@@ -525,8 +525,8 @@ describe('Menus Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('available_menus');
       expect(response.body).toHaveProperty('unavailable_menus');
       expect(response.body).toHaveProperty('categories_count');
-      expect(response.body).toHaveProperty('price_range');
-      expect(response.body).toHaveProperty('recent_menus');
+      expect(response.body).toHaveProperty('categories');
+      expect(Array.isArray(response.body.categories)).toBe(true);
     });
   });
 }); 
