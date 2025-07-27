@@ -110,7 +110,7 @@ describe('Stores Routes Integration Tests', () => {
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('존재하지 않는 스토어입니다');
+      expect(response.body.error).toContain('해당 스토어가 없습니다');
     });
 
     it('should reject request without authentication', async () => {
@@ -443,13 +443,16 @@ describe('Stores Routes Integration Tests', () => {
         .send(duplicateData)
         .expect(201);
 
+      expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('code', duplicateData.new_code);
-      expect(response.body).toHaveProperty('name', duplicateData.new_name);
-      expect(response.body).toHaveProperty('address', testData.store.address);
-      expect(response.body).toHaveProperty('phone', testData.store.phone);
-      expect(response.body).toHaveProperty('timezone', testData.store.timezone);
-      expect(response.body.id).not.toBe(testData.store.id); // 새로운 ID여야 함
+      expect(response.body).toHaveProperty('new_store');
+      expect(response.body).toHaveProperty('original_store');
+      expect(response.body.new_store).toHaveProperty('code', duplicateData.new_code);
+      expect(response.body.new_store).toHaveProperty('name', duplicateData.new_name);
+      expect(response.body.new_store).toHaveProperty('address', testData.store.address);
+      expect(response.body.new_store).toHaveProperty('phone', testData.store.phone);
+      expect(response.body.new_store).toHaveProperty('timezone', testData.store.timezone);
+      expect(response.body.new_store.id).not.toBe(testData.store.id); // 새로운 ID여야 함
     });
 
     it('should reject duplicate without authentication', async () => {
@@ -469,7 +472,7 @@ describe('Stores Routes Integration Tests', () => {
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('해당 스토어가 없습니다');
+      expect(response.body.error).toContain('존재하지 않는 스토어입니다');
     });
   });
 

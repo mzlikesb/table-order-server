@@ -788,11 +788,12 @@ router.post('/bulk-status-update',
       try {
         await client.query('BEGIN');
 
+        const updatePlaceholders = order_ids.map((_, index) => `$${index + 2}`).join(',');
         const updateQuery = `
           UPDATE orders SET 
             status = $1, 
             completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
-          WHERE id IN (${placeholders}) AND store_id = $${order_ids.length + 2}
+          WHERE id IN (${updatePlaceholders}) AND store_id = $${order_ids.length + 2}
           RETURNING *
         `;
         const result = await client.query(updateQuery, [new_status, ...order_ids, storeId]);
