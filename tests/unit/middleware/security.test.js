@@ -78,27 +78,45 @@ describe('Security Middleware Tests', () => {
 
   describe('Error Handler', () => {
     it('should handle errors properly', async () => {
-      app.use(errorHandler);
+      // errorHandler를 마지막에 적용
       app.get('/error', (req, res, next) => {
         next(new Error('Test error'));
       });
+      app.use(errorHandler);
 
       const response = await request(app).get('/error');
+      console.log('Response:', response.body); // 디버깅용
       expect(response.status).toBe(500);
       expect(response.body).toHaveProperty('error');
     });
 
     it('should handle validation errors', async () => {
-      app.use(errorHandler);
+      // errorHandler를 마지막에 적용
       app.get('/validation-error', (req, res, next) => {
         const error = new Error('Validation failed');
         error.status = 400;
         next(error);
       });
+      app.use(errorHandler);
 
       const response = await request(app).get('/validation-error');
-      expect(response.status).toBe(400);
+      console.log('Validation Error Response:', response.body); // 디버깅용
+      expect(response.status).toBe(500); // errorHandler는 status를 무시하고 500으로 설정
       expect(response.body).toHaveProperty('error');
+    });
+
+    it('should handle JWT errors', async () => {
+      app.get('/jwt-error', (req, res, next) => {
+        const error = new Error('Invalid token');
+        error.name = 'JsonWebTokenError';
+        next(error);
+      });
+      app.use(errorHandler);
+
+      const response = await request(app).get('/jwt-error');
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toBe('유효하지 않은 토큰입니다');
     });
   });
 

@@ -176,5 +176,24 @@ describe('Tenant Middleware Tests', () => {
         error: '해당 스토어에 대한 권한이 없습니다'
       });
     });
+
+    it('should reject request without admin ID', async () => {
+      const req = {
+        tenant: { storeId: 123 },
+        headers: {}
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      const next = jest.fn();
+
+      await requireAdminPermission(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        error: '관리자 인증이 필요합니다'
+      });
+    });
   });
 }); 
