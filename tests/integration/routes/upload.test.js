@@ -43,6 +43,7 @@ describe('Upload Routes Integration Tests', () => {
       const response = await request(app)
         .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
+        .set('X-Store-ID', testData.store.id.toString())
         .field('store_id', testData.store.id.toString())
         .attach('image', testImageBuffer, 'test-image.jpg');
 
