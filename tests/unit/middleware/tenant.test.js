@@ -133,7 +133,8 @@ describe('Tenant Middleware Tests', () => {
 
       const req = {
         tenant: { storeId: 123 },
-        headers: { 'x-admin-id': '1' }
+        headers: { 'x-admin-id': '1' },
+        body: {}
       };
       const res = {
         status: jest.fn().mockReturnThis(),
@@ -161,7 +162,8 @@ describe('Tenant Middleware Tests', () => {
 
       const req = {
         tenant: { storeId: 123 },
-        headers: { 'x-admin-id': '999' }
+        headers: { 'x-admin-id': '999' },
+        body: {}
       };
       const res = {
         status: jest.fn().mockReturnThis(),
@@ -180,7 +182,8 @@ describe('Tenant Middleware Tests', () => {
     it('should reject request without admin ID', async () => {
       const req = {
         tenant: { storeId: 123 },
-        headers: {}
+        headers: {},
+        body: {}
       };
       const res = {
         status: jest.fn().mockReturnThis(),
@@ -193,6 +196,25 @@ describe('Tenant Middleware Tests', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         error: '관리자 인증이 필요합니다'
+      });
+    });
+
+    it('should reject request without tenant', async () => {
+      const req = {
+        headers: {},
+        body: {}
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      const next = jest.fn();
+
+      await requireAdminPermission(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'store_id가 필요합니다'
       });
     });
   });
