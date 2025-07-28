@@ -35,12 +35,13 @@ router.post('/menu-image',
   validateFile,
   async (req, res) => {
     try {
-      const { store_id } = req.body;
+      // multipart/form-data에서 store_id를 찾는 방법 개선
+      const store_id = req.body.store_id || req.query.store_id || req.headers['x-store-id'];
       const file = req.file;
       
       if (!store_id) {
         // 임시 파일 삭제
-        deleteFile(file.path);
+        if (file) deleteFile(file.path);
         return res.status(400).json({ error: 'store_id가 필요합니다.' });
       }
 

@@ -47,8 +47,16 @@ describe('Upload Routes Integration Tests', () => {
         .attach('image', testImageBuffer, 'test-image.jpg');
 
       // 디버깅: 실제 응답 확인
-      console.log('Upload Response Status:', response.status);
-      console.log('Upload Response Body:', response.body);
+      console.log('=== UPLOAD TEST DEBUG ===');
+      console.log('Status:', response.status);
+      console.log('Body:', JSON.stringify(response.body, null, 2));
+      console.log('Headers:', response.headers);
+      console.log('========================');
+
+      // 400 에러인 경우 에러 메시지 출력
+      if (response.status === 400) {
+        console.log('❌ 400 Error Details:', response.body);
+      }
 
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('message');
