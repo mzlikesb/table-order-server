@@ -687,4 +687,69 @@ router.put('/:id/logo',
   }
 );
 
+/**
+ * [GET] /api/stores/:id/tables
+ * 특정 스토어의 테이블 목록 조회
+ */
+router.get('/:id/tables', 
+  authenticateToken, 
+  async (req, res) => {
+    const { id } = req.params;
+    const { status, limit = 50, offset = 0 } = req.query;
+    
+    try {
+      // 스토어가 존재하는지 확인
+      const storeCheck = await pool.query(
+        'SELECT id, name FROM stores WHERE id = $1',
+        [id]
+      );
+
+      if (storeCheck.rowCount === 0) {
+        return res.status(404).json({ error: '해당 스토어가 없습니다' });
+      }
+
+      // 권한 확인
+      if (req.user.is_super_admin) {
+        // 슈퍼 관리자는 모든 스토어 접근 가능
+      } else {
+        // 일반 관리자는 권한 확인
+        const permissionResult = await pool.query(
+          `SELECT role FROM admin_store_permissions 
+           WHERE admin_id = $1 AND store_id = $2`,
+          [req.user.id, id]
+        );
+
+        if (permissionResult.rowCount === 0) {
+          return res.status(403).json({ error: '해당 스토어에 대한 권한이 없습니다' });
+        }
+      }
+
+      let query = `
+        SELECT 
+          t.id, t.store_id, t.table_number, t.name, t.capacity, 
+          t.status, t.is_active, t.created_at, t.updated_at,
+          s.name as store_name
+        FROM tables t
+        JOIN stores s ON t.store_id = s.id
+        WHERE t.store_id = $1 AND t.is_active = true
+      `;
+      let params = [id];
+
+      if (status) {
+        query += ' AND t.status = $2';
+        params.push(status);
+      }
+
+      query += ' ORDER BY t.table_number LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+      params.push(parseInt(limit), parseInt(offset));
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (e) {
+      console.error('스토어별 테이블 조회 실패:', e);
+      res.status(500).json({ error: '스토어별 테이블 조회 실패' });
+    }
+  }
+);
+
 module.exports = router; 
