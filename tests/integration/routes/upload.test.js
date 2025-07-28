@@ -37,24 +37,19 @@ describe('Upload Routes Integration Tests', () => {
 
   describe('POST /api/upload/image', () => {
     it('should upload image successfully', async () => {
-      // 테스트용 이미지 파일 생성
-      const testImagePath = path.join(__dirname, '../../test-image.jpg');
-      const testImageBuffer = Buffer.from('fake image data');
-      fs.writeFileSync(testImagePath, testImageBuffer);
+      // Buffer를 직접 사용하여 파일 생성
+      const testImageBuffer = Buffer.from('fake image data for testing');
 
       const response = await request(app)
         .post('/api/upload/image')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .attach('image', testImagePath)
+        .attach('image', testImageBuffer, 'test-image.jpg')
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('filename');
       expect(response.body).toHaveProperty('url');
-
-      // 테스트 파일 정리
-      fs.unlinkSync(testImagePath);
     });
 
     it('should reject upload without authentication', async () => {
@@ -86,37 +81,31 @@ describe('Upload Routes Integration Tests', () => {
     });
 
     it('should reject upload with invalid file type', async () => {
-      // 테스트용 텍스트 파일 생성
-      const testFilePath = path.join(__dirname, '../../test-file.txt');
-      fs.writeFileSync(testFilePath, 'This is not an image');
+      // 텍스트 파일 Buffer 생성
+      const testFileBuffer = Buffer.from('This is not an image file');
 
       const response = await request(app)
         .post('/api/upload/image')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .attach('image', testFilePath)
+        .attach('image', testFileBuffer, 'test-file.txt')
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).toContain('이미지 파일만 업로드 가능합니다');
-
-      // 테스트 파일 정리
-      fs.unlinkSync(testFilePath);
     });
   });
 
   describe('DELETE /api/upload/:filename', () => {
     it('should delete uploaded file successfully', async () => {
       // 먼저 파일 업로드
-      const testImagePath = path.join(__dirname, '../../test-image.jpg');
-      const testImageBuffer = Buffer.from('fake image data');
-      fs.writeFileSync(testImagePath, testImageBuffer);
+      const testImageBuffer = Buffer.from('fake image data for testing');
 
       const uploadResponse = await request(app)
         .post('/api/upload/image')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Store-ID', testData.store.id.toString())
-        .attach('image', testImagePath);
+        .attach('image', testImageBuffer, 'test-image.jpg');
 
       const filename = uploadResponse.body.filename;
 
@@ -129,9 +118,6 @@ describe('Upload Routes Integration Tests', () => {
 
       expect(response.body).toHaveProperty('message');
       expect(response.body.message).toContain('파일이 성공적으로 삭제되었습니다');
-
-      // 테스트 파일 정리
-      fs.unlinkSync(testImagePath);
     });
 
     it('should reject delete without authentication', async () => {
