@@ -119,17 +119,16 @@ describe('Tenant Middleware Tests', () => {
   });
 
   describe('requireAdminPermission', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('should allow request with admin permission', async () => {
-      // Mock database responses
-      pool.query
-        .mockResolvedValueOnce({
-          rowCount: 1,
-          rows: [{ id: 123, name: 'Test Store', is_active: true }]
-        })
-        .mockResolvedValueOnce({
-          rowCount: 1,
-          rows: [{ role: 'owner' }]
-        });
+      // Mock database response for permission check
+      pool.query.mockResolvedValue({
+        rowCount: 1,
+        rows: [{ role: 'owner' }]
+      });
 
       const req = {
         tenant: { storeId: 123 },
@@ -144,25 +143,23 @@ describe('Tenant Middleware Tests', () => {
 
       await requireAdminPermission(req, res, next);
 
-      console.log('Mock calls:', pool.query.mock.calls); // 디버깅용
-      console.log('Next called:', next.mock.calls.length); // 디버깅용
-      console.log('Admin role:', req.tenant?.adminRole); // 디버깅용
+      // Verify mock was called with correct parameters
+      expect(pool.query).toHaveBeenCalledWith(
+        `SELECT role FROM admin_store_permissions 
+       WHERE admin_id = $1 AND store_id = $2`,
+        ['1', 123]
+      );
 
       expect(next).toHaveBeenCalled();
       expect(req.tenant.adminRole).toBe('owner');
     });
 
     it('should reject request without admin permission', async () => {
-      // Mock database responses
-      pool.query
-        .mockResolvedValueOnce({
-          rowCount: 1,
-          rows: [{ id: 123, name: 'Test Store', is_active: true }]
-        })
-        .mockResolvedValueOnce({
-          rowCount: 0,
-          rows: []
-        });
+      // Mock database response for permission check
+      pool.query.mockResolvedValue({
+        rowCount: 0,
+        rows: []
+      });
 
       const req = {
         tenant: { storeId: 123 },
@@ -177,8 +174,12 @@ describe('Tenant Middleware Tests', () => {
 
       await requireAdminPermission(req, res, next);
 
-      console.log('Status calls:', res.status.mock.calls); // 디버깅용
-      console.log('JSON calls:', res.json.mock.calls); // 디버깅용
+      // Verify mock was called
+      expect(pool.query).toHaveBeenCalledWith(
+        `SELECT role FROM admin_store_permissions 
+       WHERE admin_id = $1 AND store_id = $2`,
+        ['999', 123]
+      );
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
