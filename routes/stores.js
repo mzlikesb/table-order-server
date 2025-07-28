@@ -21,7 +21,7 @@ router.get('/',
     try {
       let query = `
         SELECT 
-          id, code, name, address, phone, timezone, logo_url, small_logo_url, is_active, 
+          id, code, name, address, phone, timezone, small_logo_url, is_active, 
           created_at, updated_at
         FROM stores 
       `;
@@ -56,7 +56,7 @@ router.get('/search',
     try {
       let query = `
         SELECT 
-          id, code, name, address, phone, timezone, logo_url, small_logo_url, is_active, 
+          id, code, name, address, phone, timezone, small_logo_url, is_active, 
           created_at, updated_at
         FROM stores
         WHERE 1=1
@@ -100,7 +100,7 @@ router.get('/stats',
           COUNT(*) as total_stores,
           COUNT(CASE WHEN is_active = true THEN 1 END) as active_stores,
           COUNT(CASE WHEN is_active = false THEN 1 END) as inactive_stores,
-          COUNT(CASE WHEN logo_url IS NOT NULL THEN 1 END) as stores_with_logos
+          COUNT(CASE WHEN small_logo_url IS NOT NULL THEN 1 END) as stores_with_logos
         FROM stores
       `);
 
@@ -157,7 +157,7 @@ router.get('/:id',
     try {
       const result = await pool.query(`
         SELECT 
-          id, code, name, address, phone, timezone, logo_url, small_logo_url, is_active, 
+          id, code, name, address, phone, timezone, small_logo_url, is_active, 
           created_at, updated_at
         FROM stores 
         WHERE id = $1
@@ -182,7 +182,7 @@ router.post('/',
   authenticateToken, 
   requireRole(['super_admin']),
   async (req, res) => {
-    const { code, name, address, phone, timezone, logo_url, small_logo_url } = req.body;
+    const { code, name, address, phone, timezone, small_logo_url } = req.body;
     
     if (!code || !code.trim() || !name || !name.trim()) {
       return res.status(400).json({ error: '스토어 코드와 이름이 필요합니다' });
@@ -215,9 +215,9 @@ router.post('/',
       }
 
       const result = await pool.query(
-        `INSERT INTO stores (code, name, address, phone, timezone, logo_url, small_logo_url)
-         VALUES ($1, $2, $3, $4, COALESCE($5, 'Asia/Seoul'), $6, $7) RETURNING *`,
-        [code.trim(), name.trim(), address || null, phone || null, timezone, logo_url || null, small_logo_url || null]
+        `INSERT INTO stores (code, name, address, phone, timezone, small_logo_url)
+         VALUES ($1, $2, $3, $4, COALESCE($5, 'Asia/Seoul'), $6) RETURNING *`,
+        [code.trim(), name.trim(), address || null, phone || null, timezone, small_logo_url || null]
       );
       res.status(201).json(result.rows[0]);
     } catch (e) {
@@ -239,7 +239,7 @@ router.put('/:id',
   requireRole(['super_admin']),
   async (req, res) => {
     const { id } = req.params;
-    const { code, name, address, phone, timezone, is_active, logo_url, small_logo_url } = req.body;
+    const { code, name, address, phone, timezone, is_active, small_logo_url } = req.body;
     
     if (!code || !code.trim() || !name || !name.trim()) {
       return res.status(400).json({ error: '스토어 코드와 이름이 필요합니다' });
@@ -289,11 +289,10 @@ router.put('/:id',
            phone = $4,
            timezone = COALESCE($5, 'Asia/Seoul'),
            is_active = COALESCE($6, true),
-           logo_url = $7,
-           small_logo_url = $8,
+           small_logo_url = $7,
            updated_at = NOW()
-         WHERE id = $9 RETURNING *`,
-        [code.trim(), name.trim(), address || null, phone || null, timezone, is_active, logo_url || null, small_logo_url || null, id]
+         WHERE id = $8 RETURNING *`,
+        [code.trim(), name.trim(), address || null, phone || null, timezone, is_active, small_logo_url || null, id]
       );
       
       if (result.rowCount === 0) {
@@ -324,7 +323,7 @@ router.patch('/:id',
     let i = 1;
 
     // 수정 가능한 필드들
-    const allowedFields = ['code', 'name', 'address', 'phone', 'timezone', 'is_active', 'logo_url', 'small_logo_url'];
+    const allowedFields = ['code', 'name', 'address', 'phone', 'timezone', 'is_active', 'small_logo_url'];
     
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {
@@ -487,7 +486,7 @@ router.get('/code/:code',
     try {
       const result = await pool.query(`
         SELECT 
-          id, code, name, address, phone, timezone, logo_url, small_logo_url, is_active, 
+          id, code, name, address, phone, timezone, small_logo_url, is_active, 
           created_at, updated_at
         FROM stores 
         WHERE code = $1
@@ -602,15 +601,14 @@ router.post('/duplicate',
 
       // 새 스토어 생성
       const newStore = await client.query(
-        `INSERT INTO stores (code, name, address, phone, timezone, logo_url, small_logo_url, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        `INSERT INTO stores (code, name, address, phone, timezone, small_logo_url, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
         [
           new_code.trim(),
           new_name.trim(),
           originalStore.rows[0].address,
           originalStore.rows[0].phone,
           originalStore.rows[0].timezone,
-          originalStore.rows[0].logo_url,
           originalStore.rows[0].small_logo_url,
           false // 복제된 스토어는 비활성화 상태로 시작
         ]
@@ -644,9 +642,9 @@ router.put('/:id/logo',
   requireRole(['super_admin']),
   async (req, res) => {
     const { id } = req.params;
-    const { logo_url, small_logo_url } = req.body;
+    const { small_logo_url } = req.body;
 
-    if (!logo_url && !small_logo_url) {
+    if (!small_logo_url) {
       return res.status(400).json({ error: '로고 URL이 필요합니다' });
     }
 
@@ -664,11 +662,6 @@ router.put('/:id/logo',
       const updateFields = [];
       const values = [];
       let i = 1;
-
-      if (logo_url !== undefined) {
-        updateFields.push(`logo_url = $${i++}`);
-        values.push(logo_url);
-      }
 
       if (small_logo_url !== undefined) {
         updateFields.push(`small_logo_url = $${i++}`);
