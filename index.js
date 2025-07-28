@@ -222,17 +222,17 @@ app.get('/api', (req, res) => {
   });
 });
 
-// 404 핸들러
-app.use('/*', (req, res) => {
+// 에러 핸들링 미들웨어 (라우터 이후에 추가)
+app.use(errorHandler);
+
+// 404 핸들러 (마지막에 추가)
+app.use((req, res) => {
   res.status(404).json({ 
     error: '요청한 리소스를 찾을 수 없습니다',
     path: req.originalUrl,
     method: req.method
   });
 });
-
-// 에러 핸들링 미들웨어 (라우터 이후에 추가)
-app.use(errorHandler);
 
 // 프로세스 종료 시 정리 작업
 process.on('SIGTERM', () => {
