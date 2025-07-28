@@ -35,8 +35,19 @@ router.post('/menu-image',
   validateFile,
   async (req, res) => {
     try {
+      // 디버깅: 실제 전달된 값들 확인
+      console.log('=== UPLOAD DEBUG ===');
+      console.log('req.body:', req.body);
+      console.log('req.query:', req.query);
+      console.log('req.headers:', req.headers);
+      console.log('req.file:', req.file ? 'File exists' : 'No file');
+      console.log('===================');
+
       // multipart/form-data에서 store_id를 찾는 방법 개선
       const store_id = req.body.store_id || req.query.store_id || req.headers['x-store-id'];
+      
+      console.log('Found store_id:', store_id);
+      
       const file = req.file;
       
       if (!store_id) {
