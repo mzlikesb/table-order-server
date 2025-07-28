@@ -35,27 +35,27 @@ describe('Upload Routes Integration Tests', () => {
     });
   });
 
-  describe('POST /api/upload/image', () => {
+  describe('POST /api/upload/menu-image', () => {
     it('should upload image successfully', async () => {
       // Buffer를 직접 사용하여 파일 생성
       const testImageBuffer = Buffer.from('fake image data for testing');
 
       const response = await request(app)
-        .post('/api/upload/image')
+        .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('X-Store-ID', testData.store.id.toString())
+        .field('store_id', testData.store.id.toString())
         .attach('image', testImageBuffer, 'test-image.jpg')
-        .expect(200);
+        .expect(201);
 
-      expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('filename');
-      expect(response.body).toHaveProperty('url');
+      expect(response.body).toHaveProperty('message');
+      expect(response.body).toHaveProperty('file');
+      expect(response.body.message).toContain('메뉴 이미지가 성공적으로 업로드되었습니다');
     });
 
     it('should reject upload without authentication', async () => {
       const response = await request(app)
-        .post('/api/upload/image')
-        .set('X-Store-ID', testData.store.id.toString())
+        .post('/api/upload/menu-image')
+        .field('store_id', testData.store.id.toString())
         .expect(401);
 
       expect(response.body).toHaveProperty('error');
@@ -63,7 +63,7 @@ describe('Upload Routes Integration Tests', () => {
 
     it('should reject upload without store ID', async () => {
       const response = await request(app)
-        .post('/api/upload/image')
+        .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
 
@@ -72,9 +72,9 @@ describe('Upload Routes Integration Tests', () => {
 
     it('should reject upload without image file', async () => {
       const response = await request(app)
-        .post('/api/upload/image')
+        .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('X-Store-ID', testData.store.id.toString())
+        .field('store_id', testData.store.id.toString())
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
@@ -85,9 +85,9 @@ describe('Upload Routes Integration Tests', () => {
       const testFileBuffer = Buffer.from('This is not an image file');
 
       const response = await request(app)
-        .post('/api/upload/image')
+        .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('X-Store-ID', testData.store.id.toString())
+        .field('store_id', testData.store.id.toString())
         .attach('image', testFileBuffer, 'test-file.txt')
         .expect(400);
 
@@ -102,12 +102,13 @@ describe('Upload Routes Integration Tests', () => {
       const testImageBuffer = Buffer.from('fake image data for testing');
 
       const uploadResponse = await request(app)
-        .post('/api/upload/image')
+        .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('X-Store-ID', testData.store.id.toString())
+        .field('store_id', testData.store.id.toString())
         .attach('image', testImageBuffer, 'test-image.jpg');
 
-      const filename = uploadResponse.body.filename;
+      // 실제 파일명을 가져오기 위해 응답 확인
+      const filename = uploadResponse.body.file?.filename || 'test-image.jpg';
 
       // 파일 삭제
       const response = await request(app)
