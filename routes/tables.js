@@ -541,14 +541,27 @@ router.delete('/:id',
  */
 router.get('/store/:storeId', 
   authenticateToken, 
-  requireStorePermission,
   async (req, res) => {
     const { storeId } = req.params;
     const { status, limit = 50, offset = 0 } = req.query;
     
-    // URL의 storeId와 tenant의 storeId가 일치하는지 확인
-    if (storeId != req.tenant?.storeId) {
-      return res.status(403).json({ error: '접근 권한이 없습니다' });
+    // req.tenant 설정
+    req.tenant = { storeId: parseInt(storeId) };
+    
+    // 스토어 권한 확인
+    if (req.user.is_super_admin) {
+      // 슈퍼 관리자는 모든 스토어 접근 가능
+    } else {
+      // 일반 관리자는 권한 확인
+      const permissionResult = await pool.query(
+        `SELECT role FROM admin_store_permissions 
+         WHERE admin_id = $1 AND store_id = $2`,
+        [req.user.id, req.tenant.storeId]
+      );
+
+      if (permissionResult.rowCount === 0) {
+        return res.status(403).json({ error: '해당 스토어에 대한 권한이 없습니다' });
+      }
     }
 
     try {
