@@ -144,6 +144,10 @@ describe('Tenant Middleware Tests', () => {
 
       await requireAdminPermission(req, res, next);
 
+      console.log('Mock calls:', pool.query.mock.calls); // 디버깅용
+      console.log('Next called:', next.mock.calls.length); // 디버깅용
+      console.log('Admin role:', req.tenant?.adminRole); // 디버깅용
+
       expect(next).toHaveBeenCalled();
       expect(req.tenant.adminRole).toBe('owner');
     });
@@ -172,6 +176,9 @@ describe('Tenant Middleware Tests', () => {
       const next = jest.fn();
 
       await requireAdminPermission(req, res, next);
+
+      console.log('Status calls:', res.status.mock.calls); // 디버깅용
+      console.log('JSON calls:', res.json.mock.calls); // 디버깅용
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
