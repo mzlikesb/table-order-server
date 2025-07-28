@@ -44,9 +44,13 @@ describe('Upload Routes Integration Tests', () => {
         .post('/api/upload/menu-image')
         .set('Authorization', `Bearer ${authToken}`)
         .field('store_id', testData.store.id.toString())
-        .attach('image', testImageBuffer, 'test-image.jpg')
-        .expect(201);
+        .attach('image', testImageBuffer, 'test-image.jpg');
 
+      // 디버깅: 실제 응답 확인
+      console.log('Upload Response Status:', response.status);
+      console.log('Upload Response Body:', response.body);
+
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('file');
       expect(response.body.message).toContain('메뉴 이미지가 성공적으로 업로드되었습니다');
