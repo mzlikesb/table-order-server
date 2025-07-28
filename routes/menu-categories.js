@@ -128,11 +128,28 @@ router.post('/',
   requireStorePermission,
   requireRole(['owner', 'manager']),
   async (req, res) => {
-    const { name, sort_order, description } = req.body;
-    const storeId = req.tenant?.storeId;
+    const { name, sort_order, description, store_id } = req.body;
+    
+    // store_id를 여러 방법으로 찾기
+    let storeId = req.tenant?.storeId || 
+                  req.headers['x-store-id'] || 
+                  store_id || 
+                  req.body.store_id;
+    
+    // 디버깅 로그
+    console.log('=== 메뉴 카테고리 추가 디버그 ===');
+    console.log('req.tenant:', req.tenant);
+    console.log('req.headers:', req.headers);
+    console.log('req.body:', req.body);
+    console.log('storeId:', storeId);
+    console.log('===============================');
     
     if (!name || !name.trim()) {
       return res.status(400).json({ error: '카테고리 이름이 필요합니다' });
+    }
+    
+    if (!storeId) {
+      return res.status(400).json({ error: 'store_id가 필요합니다' });
     }
     
     // 이름 길이 검증
