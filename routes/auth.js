@@ -32,8 +32,18 @@ router.post('/login', async (req, res) => {
 
     const admin = adminResult.rows[0];
 
+    // 디버깅 로그
+    console.log('=== 로그인 디버그 ===');
+    console.log('Username:', username);
+    console.log('Password:', password);
+    console.log('Stored Hash:', admin.password_hash);
+    console.log('Is Super Admin:', admin.is_super_admin);
+    
     // 비밀번호 검증
     const isValidPassword = await comparePassword(password, admin.password_hash);
+    console.log('Password Valid:', isValidPassword);
+    console.log('========================');
+    
     if (!isValidPassword) {
       return res.status(401).json({ error: '잘못된 사용자명 또는 비밀번호입니다' });
     }
