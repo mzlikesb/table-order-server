@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const pool = require('./db/connection');
 
 // 보안 미들웨어 import
 const { 
@@ -202,6 +203,95 @@ app.use('/api/tables', tablesRouter);
 app.use('/api/calls', callsRouter);
 app.use('/api/stores', storesRouter);
 app.use('/api/tenant', tenantRouter);
+
+// 임시 해결책: 프록시 문제로 인한 /customer 요청을 직접 처리
+app.get('/customer', async (req, res) => {
+  const { store_id, category_id } = req.query;
+  
+  if (!store_id) {
+    return res.status(400).json({ error: '스토어 ID가 필요합니다' });
+  }
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    let query = `
+      SELECT 
+        m.id, m.name, m.description, m.price, m.image_url, m.is_available,
+        mc.name as category_name, mc.sort_order
+      FROM menus m
+      JOIN menu_categories mc ON m.category_id = mc.id
+      WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
+    `;
+    let params = [store_id];
+    
+    if (category_id) {
+      query += ' AND m.category_id = $' + (params.length + 1);
+      params.push(parseInt(category_id));
+    }
+    
+    query += ' ORDER BY mc.sort_order, m.name';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (e) {
+    console.error('고객용 메뉴 조회 실패:', e);
+    res.status(500).json({ error: '메뉴 조회 실패' });
+  }
+});
+
+// 임시 해결책: 프록시 문제로 인한 /menu-categories/customer 요청을 직접 처리
+app.get('/menu-categories/customer', async (req, res) => {
+  const { store_id } = req.query;
+  
+  if (!store_id) {
+    return res.status(400).json({ error: '스토어 ID가 필요합니다' });
+  }
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        mc.id, mc.name, mc.description, mc.sort_order,
+        COUNT(m.id) as menu_count,
+        COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
+      FROM menu_categories mc
+      LEFT JOIN menus m ON mc.id = m.category_id
+      WHERE mc.store_id = $1 AND mc.is_active = true
+      GROUP BY mc.id
+      ORDER BY mc.sort_order, mc.name
+    `, [store_id]);
+    
+    // COUNT 결과를 숫자로 변환
+    const rows = result.rows.map(row => ({
+      ...row,
+      menu_count: parseInt(row.menu_count, 10),
+      active_menu_count: parseInt(row.active_menu_count, 10)
+    }));
+    
+    res.json(rows);
+  } catch (e) {
+    console.error('고객용 메뉴 카테고리 조회 실패:', e);
+    res.status(500).json({ error: '메뉴 카테고리 조회 실패' });
+  }
+});
 
 // 헬스 체크 엔드포인트
 app.get('/health', (req, res) => {
