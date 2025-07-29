@@ -206,6 +206,50 @@ Content-Type: application/json
 }
 ```
 
+### 공개 스토어 정보 조회
+```http
+GET /api/stores/1/public
+```
+
+**응답:**
+```json
+{
+  "id": 1,
+  "code": "STORE_001",
+  "name": "맛있는 식당",
+  "address": "서울시 강남구 테헤란로 123",
+  "phone": "02-1234-5678",
+  "timezone": "Asia/Seoul",
+  "small_logo_url": "https://example.com/logo.png",
+  "is_active": true,
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-15T10:00:00Z"
+}
+```
+
+### 공개 테이블 목록 조회
+```http
+GET /api/tables/public/store/1?status=available
+```
+
+**응답:**
+```json
+[
+  {
+    "id": 1,
+    "store_id": 1,
+    "table_number": "A1",
+    "name": "창가 테이블",
+    "capacity": 4,
+    "status": "available",
+    "is_active": true,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "store_name": "맛있는 식당"
+  }
+]
+```
+
 ## 멀티테넌트 API
 
 ### 가게 대시보드

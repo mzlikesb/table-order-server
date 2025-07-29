@@ -688,6 +688,60 @@ router.put('/:id/logo',
 );
 
 /**
+ * [GET] /api/stores/:id/public
+ * 공개 스토어 정보 조회 (인증 없이)
+ */
+router.get('/:id/public', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, code, name, address, phone, timezone, small_logo_url, is_active,
+        created_at, updated_at
+      FROM stores 
+      WHERE id = $1 AND is_active = true
+    `, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('공개 스토어 조회 실패:', e);
+    res.status(500).json({ error: '스토어 조회 실패' });
+  }
+});
+
+/**
+ * [GET] /api/stores/public/:id
+ * 공개 스토어 정보 조회 (인증 없이) - 대체 경로
+ */
+router.get('/public/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, code, name, address, phone, timezone, small_logo_url, is_active,
+        created_at, updated_at
+      FROM stores 
+      WHERE id = $1 AND is_active = true
+    `, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('공개 스토어 조회 실패:', e);
+    res.status(500).json({ error: '스토어 조회 실패' });
+  }
+});
+
+/**
  * [GET] /api/stores/:id/tables
  * 특정 스토어의 테이블 목록 조회
  */

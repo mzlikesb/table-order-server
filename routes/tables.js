@@ -868,6 +868,96 @@ router.post('/duplicate',
 );
 
 /**
+ * [GET] /api/tables/public/store/:storeId
+ * 공개 테이블 목록 조회 (인증 없이)
+ */
+router.get('/public/store/:storeId', async (req, res) => {
+  const { storeId } = req.params;
+  const { status } = req.query;
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1 AND is_active = true',
+      [storeId]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    let query = `
+      SELECT 
+        t.id, t.store_id, t.table_number, t.name, t.capacity, 
+        t.status, t.is_active, t.created_at, t.updated_at,
+        s.name as store_name
+      FROM tables t
+      JOIN stores s ON t.store_id = s.id
+      WHERE t.store_id = $1 AND t.is_active = true
+    `;
+    let params = [storeId];
+
+    if (status) {
+      query += ' AND t.status = $2';
+      params.push(status);
+    }
+
+    query += ' ORDER BY t.table_number';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (e) {
+    console.error('공개 테이블 조회 실패:', e);
+    res.status(500).json({ error: '테이블 조회 실패' });
+  }
+});
+
+/**
+ * [GET] /api/tables/store/:storeId/public
+ * 공개 테이블 목록 조회 (인증 없이) - 대체 경로
+ */
+router.get('/store/:storeId/public', async (req, res) => {
+  const { storeId } = req.params;
+  const { status } = req.query;
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1 AND is_active = true',
+      [storeId]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    let query = `
+      SELECT 
+        t.id, t.store_id, t.table_number, t.name, t.capacity, 
+        t.status, t.is_active, t.created_at, t.updated_at,
+        s.name as store_name
+      FROM tables t
+      JOIN stores s ON t.store_id = s.id
+      WHERE t.store_id = $1 AND t.is_active = true
+    `;
+    let params = [storeId];
+
+    if (status) {
+      query += ' AND t.status = $2';
+      params.push(status);
+    }
+
+    query += ' ORDER BY t.table_number';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (e) {
+    console.error('공개 테이블 조회 실패:', e);
+    res.status(500).json({ error: '테이블 조회 실패' });
+  }
+});
+
+/**
  * [POST] /api/tables/quick-status
  * 테이블 상태 빠른 변경 (멀티테넌트)
  * Body: { table_id, status }
