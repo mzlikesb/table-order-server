@@ -138,9 +138,9 @@ const requireRole = (allowedRoles) => {
 };
 
 /**
- * 키오스크용 간단한 인증 (테이블 ID + 스토어 ID만 확인)
+ * 고객용 간단한 인증 (테이블 ID + 스토어 ID만 확인)
  */
-const authenticateKiosk = (req, res, next) => {
+const authenticateCustomer = (req, res, next) => {
   const tableId = req.headers['x-table-id'];
   const storeId = req.headers['x-store-id'];
   
@@ -150,7 +150,7 @@ const authenticateKiosk = (req, res, next) => {
     });
   }
   
-  req.kiosk = {
+  req.customer = {
     tableId: tableId,
     storeId: storeId
   };
@@ -166,5 +166,5 @@ module.exports = {
   authenticateToken,
   requireStorePermission,
   requireRole,
-  authenticateKiosk
+  authenticateCustomer
 }; 

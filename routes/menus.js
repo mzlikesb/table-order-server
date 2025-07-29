@@ -7,7 +7,7 @@ const {
   authenticateToken, 
   requireStorePermission, 
   requireRole,
-  authenticateKiosk
+  authenticateCustomer
 } = require('../middleware/auth');
 
 /**
@@ -840,11 +840,11 @@ router.post('/duplicate',
 );
 
 /**
- * [GET] /api/menus/kiosk
- * 키오스크용 메뉴 조회 (테이블별, 간단한 인증)
+ * [GET] /api/menus/customer-auth
+ * 고객용 메뉴 조회 (테이블별, 간단한 인증)
  */
-router.get('/kiosk', authenticateKiosk, async (req, res) => {
-  const { storeId } = req.kiosk;
+router.get('/customer-auth', authenticateCustomer, async (req, res) => {
+  const { storeId } = req.customer;
   
   try {
     const result = await pool.query(`
@@ -859,7 +859,7 @@ router.get('/kiosk', authenticateKiosk, async (req, res) => {
 
     res.json(result.rows);
   } catch (e) {
-    console.error('키오스크 메뉴 조회 실패:', e);
+    console.error('고객용 메뉴 조회 실패:', e);
     res.status(500).json({ error: '메뉴 조회 실패' });
   }
 });

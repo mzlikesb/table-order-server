@@ -250,6 +250,53 @@ GET /api/tables/public/store/1?status=available
 ]
 ```
 
+### 공개 개별 테이블 정보 조회
+```http
+GET /api/tables/public/5
+```
+
+**응답:**
+```json
+{
+  "id": 5,
+  "store_id": 1,
+  "table_number": "A1",
+  "name": "창가 테이블",
+  "capacity": 4,
+  "status": "available",
+  "is_active": true,
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-15T10:00:00Z",
+  "store_name": "맛있는 식당",
+  "store_code": "STORE_001",
+  "store_address": "서울시 강남구 테헤란로 123",
+  "store_phone": "02-1234-5678"
+}
+```
+
+### 고객용 인증 메뉴 조회
+```http
+GET /api/menus/customer-auth
+X-Table-ID: 5
+X-Store-ID: 1
+```
+
+**응답:**
+```json
+[
+  {
+    "id": 1,
+    "name": "아메리카노",
+    "description": "깊고 진한 아메리카노",
+    "price": "4500.00",
+    "image_url": "https://example.com/americano.jpg",
+    "is_available": true,
+    "category_name": "음료",
+    "sort_order": 1
+  }
+]
+```
+
 ## 멀티테넌트 API
 
 ### 가게 대시보드
