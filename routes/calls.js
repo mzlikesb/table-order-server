@@ -735,6 +735,92 @@ router.get('/dashboard/stats',
 );
 
 /**
+ * [POST] /api/calls/public
+ * 공개 호출 생성 (인증 없이 - 고객용)
+ * Body: { store_id, table_id, call_type, message }
+ */
+router.post('/public', async (req, res) => {
+  const { store_id, table_id, call_type, message } = req.body;
+
+  if (!store_id || !table_id || !call_type) {
+    return res.status(400).json({ error: '스토어 ID, 테이블 ID, 호출 타입이 필요합니다' });
+  }
+
+  const validCallTypes = ['service', 'bill', 'help', 'custom'];
+  if (!validCallTypes.includes(call_type)) {
+    return res.status(400).json({ error: '유효하지 않은 호출 타입입니다' });
+  }
+
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    // 테이블이 해당 스토어에 속하는지 확인
+    const tableCheck = await pool.query(
+      'SELECT id, table_number FROM tables WHERE id = $1 AND store_id = $2',
+      [table_id, store_id]
+    );
+
+    if (tableCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 테이블이 없습니다' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO calls (store_id, table_id, call_type, message, status, created_at)
+       VALUES ($1::INTEGER, $2::INTEGER, $3::VARCHAR(20), $4, 'pending', NOW()) RETURNING *`,
+      [store_id, table_id, call_type, message || null]
+    );
+
+    // 테이블 정보와 함께 반환
+    const callWithTable = await pool.query(`
+      SELECT 
+        c.id, c.store_id, c.table_id, c.call_type, c.message, c.status,
+        c.responded_by, c.responded_at, c.completed_at, c.created_at, c.updated_at,
+        t.table_number,
+        s.name as store_name
+      FROM calls c
+      JOIN tables t ON c.table_id = t.id
+      JOIN stores s ON c.store_id = s.id
+      WHERE c.id = $1::INTEGER
+    `, [result.rows[0].id]);
+
+    // **멀티테넌트 Socket.IO 알림 발송**
+    try {
+      const socketHelpers = req.app.get('socketHelpers');
+      if (socketHelpers) {
+        const callData = callWithTable.rows[0];
+        socketHelpers.notifyNewCall(store_id, {
+          callId: callData.id,
+          storeId: callData.store_id,
+          tableId: callData.table_id,
+          tableNumber: callData.table_number,
+          callType: callData.call_type,
+          message: callData.message,
+          createdAt: callData.created_at
+        });
+      }
+    } catch (socketError) {
+      console.warn('Socket.IO 알림 발송 실패:', socketError);
+    }
+
+    res.status(201).json({
+      success: true,
+      call: callWithTable.rows[0]
+    });
+  } catch (e) {
+    console.error('공개 호출 생성 실패:', e);
+    res.status(500).json({ error: '공개 호출 생성 실패' });
+  }
+});
+
+/**
  * [POST] /api/calls/quick-respond
  * 빠른 응답 처리 (멀티테넌트)
  * Body: { call_id, response_type }

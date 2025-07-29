@@ -962,4 +962,152 @@ router.post('/duplicate',
   }
 );
 
+/**
+ * [POST] /api/orders/public
+ * 공개 주문 생성 (인증 없이 - 고객용)
+ * Body: { store_id, table_id, items: [{menu_id, quantity, unit_price, notes}], total_amount, notes }
+ */
+router.post('/public', async (req, res) => {
+  const { store_id, table_id, items, total_amount, notes } = req.body;
+
+  if (!store_id || !table_id || !items || items.length === 0) {
+    return res.status(400).json({ error: '스토어 ID, 테이블 ID, 주문 아이템이 필요합니다' });
+  }
+
+  // 아이템 검증
+  for (const item of items) {
+    if (!item.menu_id || !item.quantity || item.quantity <= 0 || !item.unit_price || item.unit_price <= 0) {
+      return res.status(400).json({ error: '주문 아이템 정보가 올바르지 않습니다' });
+    }
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 스토어 존재 확인
+    const storeCheck = await client.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    // 테이블이 해당 스토어에 속하는지 확인
+    const tableResult = await client.query(
+      `SELECT table_number, status FROM tables WHERE id = $1 AND store_id = $2`,
+      [table_id, store_id]
+    );
+
+    if (tableResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: '해당 테이블이 없습니다' });
+    }
+
+    // 메뉴들이 해당 스토어에 속하는지 확인
+    const menuIds = items.map(item => item.menu_id);
+    const menuPlaceholders = menuIds.map((_, index) => `$${index + 1}`).join(',');
+    const menuCheckResult = await client.query(
+      `SELECT id FROM menus WHERE id IN (${menuPlaceholders}) AND store_id = $${menuIds.length + 1} AND is_available = true`,
+      [...menuIds, store_id]
+    );
+
+    if (menuCheckResult.rowCount !== menuIds.length) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: '일부 메뉴가 해당 가게에 속하지 않거나 비활성화되어 있습니다' });
+    }
+
+    // 주문 번호 생성
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const orderNumberResult = await client.query(
+      `SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = CURRENT_DATE AND store_id = $1`,
+      [store_id]
+    );
+    const orderCount = parseInt(orderNumberResult.rows[0].count) + 1;
+    const orderNumber = `ORD_${date}_${orderCount.toString().padStart(3, '0')}`;
+
+    // 주문 생성
+    const orderResult = await client.query(
+      `INSERT INTO orders (store_id, table_id, order_number, status, total_amount, notes, created_at)
+       VALUES ($1, $2, $3, 'pending', $4, $5, NOW()) RETURNING *`,
+      [store_id, table_id, orderNumber, total_amount || 0, notes || null]
+    );
+
+    const orderId = orderResult.rows[0].id;
+
+    // 주문 아이템들 생성
+    for (const item of items) {
+      const totalPrice = item.quantity * item.unit_price;
+      await client.query(
+        `INSERT INTO order_items (order_id, menu_id, quantity, unit_price, total_price, notes)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [orderId, item.menu_id, item.quantity, item.unit_price, totalPrice, item.notes || null]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    // 주문 정보와 아이템들을 함께 조회
+    const orderWithItems = await pool.query(`
+      SELECT 
+        o.id, o.store_id, o.table_id, o.order_number, o.status, 
+        o.total_amount, o.notes, o.created_at, o.updated_at,
+        t.table_number,
+        s.name as store_name
+      FROM orders o
+      JOIN tables t ON o.table_id = t.id
+      JOIN stores s ON o.store_id = s.id
+      WHERE o.id = $1
+    `, [orderId]);
+
+    const itemsResult = await pool.query(`
+      SELECT 
+        oi.id, oi.menu_id, oi.quantity, oi.unit_price, oi.total_price, oi.notes,
+        m.name as menu_name, m.description as menu_description
+      FROM order_items oi
+      JOIN menus m ON oi.menu_id = m.id
+      WHERE oi.order_id = $1
+    `, [orderId]);
+
+    const order = orderWithItems.rows[0];
+    order.items = itemsResult.rows;
+
+    // **멀티테넌트 Socket.IO 알림 발송**
+    try {
+      const socketHelpers = req.app.get('socketHelpers');
+      if (socketHelpers) {
+        const orderData = {
+          orderId: orderId,
+          orderNumber: orderNumber,
+          storeId: store_id,
+          tableId: table_id,
+          totalAmount: total_amount || 0,
+          itemCount: items.length,
+          status: 'pending',
+          createdAt: order.created_at
+        };
+        
+        socketHelpers.notifyNewOrder(store_id, orderData);
+      }
+    } catch (socketError) {
+      console.warn('Socket.IO 알림 발송 실패:', socketError);
+    }
+
+    res.status(201).json({
+      success: true,
+      order: order
+    });
+
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('공개 주문 생성 실패:', e);
+    res.status(500).json({ error: '공개 주문 생성 실패' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

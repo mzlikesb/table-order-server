@@ -864,4 +864,52 @@ router.get('/kiosk', authenticateKiosk, async (req, res) => {
   }
 });
 
+/**
+ * [GET] /api/menus/customer
+ * 고객용 공개 메뉴 조회 (인증 없이)
+ * Query: { store_id, category_id }
+ */
+router.get('/customer', async (req, res) => {
+  const { store_id, category_id } = req.query;
+  
+  if (!store_id) {
+    return res.status(400).json({ error: '스토어 ID가 필요합니다' });
+  }
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    let query = `
+      SELECT 
+        m.id, m.name, m.description, m.price, m.image_url, m.is_available,
+        mc.name as category_name, mc.sort_order
+      FROM menus m
+      JOIN menu_categories mc ON m.category_id = mc.id
+      WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
+    `;
+    let params = [store_id];
+    
+    if (category_id) {
+      query += ' AND m.category_id = $' + (params.length + 1);
+      params.push(parseInt(category_id));
+    }
+    
+    query += ' ORDER BY mc.sort_order, m.name';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (e) {
+    console.error('고객용 메뉴 조회 실패:', e);
+    res.status(500).json({ error: '메뉴 조회 실패' });
+  }
+});
+
 module.exports = router;

@@ -79,6 +79,133 @@ POST /api/auth/logout
 Authorization: Bearer <token>
 ```
 
+## 공개 API (고객용)
+
+고객 모드에서 사용하는 공개 API입니다. 인증 없이 사용할 수 있습니다.
+
+### 공개 메뉴 카테고리 조회
+```http
+GET /api/menu-categories/customer?store_id=1
+```
+
+**응답:**
+```json
+[
+  {
+    "id": 1,
+    "name": "음료",
+    "description": "다양한 음료",
+    "sort_order": 1,
+    "menu_count": 5,
+    "active_menu_count": 4
+  }
+]
+```
+
+### 공개 메뉴 조회
+```http
+GET /api/menus/customer?store_id=1&category_id=1
+```
+
+**응답:**
+```json
+[
+  {
+    "id": 1,
+    "name": "아메리카노",
+    "description": "깊고 진한 아메리카노",
+    "price": 4500,
+    "image_url": "https://example.com/americano.jpg",
+    "is_available": true,
+    "category_name": "음료",
+    "sort_order": 1
+  }
+]
+```
+
+### 공개 호출 생성
+```http
+POST /api/calls/public
+Content-Type: application/json
+
+{
+  "store_id": 1,
+  "table_id": 5,
+  "call_type": "service",
+  "message": "물 좀 주세요"
+}
+```
+
+**응답:**
+```json
+{
+  "success": true,
+  "call": {
+    "id": 1,
+    "store_id": 1,
+    "table_id": 5,
+    "call_type": "service",
+    "message": "물 좀 주세요",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "table_number": "A1",
+    "store_name": "맛있는 식당"
+  }
+}
+```
+
+### 공개 주문 생성
+```http
+POST /api/orders/public
+Content-Type: application/json
+
+{
+  "store_id": 1,
+  "table_id": 5,
+  "items": [
+    {
+      "menu_id": 1,
+      "quantity": 2,
+      "unit_price": 4500,
+      "notes": "따뜻하게"
+    }
+  ],
+  "total_amount": 9000,
+  "notes": "빨리 부탁드려요"
+}
+```
+
+**응답:**
+```json
+{
+  "success": true,
+  "order": {
+    "id": 1,
+    "store_id": 1,
+    "table_id": 5,
+    "order_number": "ORD_20240115_001",
+    "status": "pending",
+    "total_amount": 9000,
+    "notes": "빨리 부탁드려요",
+    "created_at": "2024-01-15T10:30:00Z",
+    "table_number": "A1",
+    "store_name": "맛있는 식당",
+    "items": [
+      {
+        "id": 1,
+        "menu_id": 1,
+        "quantity": 2,
+        "unit_price": 4500,
+        "total_price": 9000,
+        "notes": "따뜻하게",
+        "menu_name": "아메리카노",
+        "menu_description": "깊고 진한 아메리카노"
+      }
+    ]
+  }
+}
+```
+
 ## 멀티테넌트 API
 
 ### 가게 대시보드
