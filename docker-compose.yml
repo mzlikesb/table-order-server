@@ -35,6 +35,7 @@ services:
       - DB_NAME=${DB_NAME:-tableorder}
       - PORT=4000
       - NODE_ENV=${NODE_ENV:-development}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
     depends_on:
       postgres:
         condition: service_healthy
