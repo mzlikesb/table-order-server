@@ -958,6 +958,36 @@ router.get('/store/:storeId/public', async (req, res) => {
 });
 
 /**
+ * [GET] /api/tables/public/:tableId
+ * 공개 개별 테이블 정보 조회 (인증 없이)
+ */
+router.get('/public/:tableId', async (req, res) => {
+  const { tableId } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        t.id, t.store_id, t.table_number, t.name, t.capacity, 
+        t.status, t.is_active, t.created_at, t.updated_at,
+        s.id as store_id, s.name as store_name, s.code as store_code,
+        s.address as store_address, s.phone as store_phone
+      FROM tables t
+      JOIN stores s ON t.store_id = s.id
+      WHERE t.id = $1 AND t.is_active = true AND s.is_active = true
+    `, [tableId]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: '해당 테이블이 없습니다' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('공개 테이블 정보 조회 실패:', e);
+    res.status(500).json({ error: '테이블 정보 조회 실패' });
+  }
+});
+
+/**
  * [POST] /api/tables/quick-status
  * 테이블 상태 빠른 변경 (멀티테넌트)
  * Body: { table_id, status }
