@@ -294,6 +294,54 @@ app.get('/api', (req, res) => {
   });
 });
 
+// 임시 해결책: /customer 경로 직접 처리
+app.get('/customer', async (req, res) => {
+  console.log('=== 루트 레벨 /customer 경로 호출됨 ===');
+  console.log('요청 URL:', req.originalUrl);
+  console.log('쿼리 파라미터:', req.query);
+  
+  const { store_id, category_id } = req.query;
+  
+  if (!store_id) {
+    return res.status(400).json({ error: '스토어 ID가 필요합니다' });
+  }
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    let query = `
+      SELECT 
+        m.id, m.name, m.description, m.price, m.image_url, m.is_available,
+        mc.name as category_name, mc.sort_order
+      FROM menus m
+      JOIN menu_categories mc ON m.category_id = mc.id
+      WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
+    `;
+    let params = [store_id];
+    
+    if (category_id) {
+      query += ' AND m.category_id = $' + (params.length + 1);
+      params.push(parseInt(category_id));
+    }
+    
+    query += ' ORDER BY mc.sort_order, m.name';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (e) {
+    console.error('고객용 메뉴 조회 실패:', e);
+    res.status(500).json({ error: '메뉴 조회 실패' });
+  }
+});
+
 // 에러 핸들링 미들웨어 (라우터 이후에 추가)
 app.use(errorHandler);
 
