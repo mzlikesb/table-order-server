@@ -227,6 +227,44 @@ app.use('/uploads', express.static('uploads'));
 // API 라우터 설정
 app.use('/api/auth', authRouter);
 app.use('/api/upload', uploadRouter);
+
+// 공개 API 경로들을 명시적으로 처리
+app.use('/api/menus/customer', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  console.log('공개 메뉴 API 요청:', req.originalUrl);
+  next();
+});
+
+app.use('/api/menu-categories/customer', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  console.log('공개 카테고리 API 요청:', req.originalUrl);
+  next();
+});
+
+app.use('/api/stores/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  console.log('공개 스토어 API 요청:', req.originalUrl);
+  next();
+});
+
+app.use('/api/tables/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  console.log('공개 테이블 API 요청:', req.originalUrl);
+  next();
+});
+
+app.use('/api/calls/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  console.log('공개 호출 API 요청:', req.originalUrl);
+  next();
+});
+
+app.use('/api/orders/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  console.log('공개 주문 API 요청:', req.originalUrl);
+  next();
+});
+
 app.use('/api/menus', menusRouter);
 app.use('/api/menu-categories', menuCategoriesRouter);
 app.use('/api/orders', ordersRouter);

@@ -6,6 +6,22 @@ const pool = require('../db/connection');
  */
 const tenantMiddleware = async (req, res, next) => {
   try {
+    // 공개 API 경로들은 건너뛰기
+    const publicPaths = [
+      '/api/menus/customer',
+      '/api/menu-categories/customer',
+      '/api/stores/public',
+      '/api/tables/public',
+      '/api/calls/public',
+      '/api/orders/public'
+    ];
+    
+    const isPublicPath = publicPaths.some(path => req.path.startsWith(path));
+    if (isPublicPath) {
+      console.log('공개 API 경로 감지:', req.path);
+      return next();
+    }
+    
     // store_id를 다양한 방법으로 추출
     let storeId = null;
     

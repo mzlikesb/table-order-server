@@ -870,6 +870,12 @@ router.get('/customer-auth', authenticateCustomer, async (req, res) => {
  * Query: { store_id, category_id }
  */
 router.get('/customer', async (req, res) => {
+  console.log('=== 공개 메뉴 API 호출됨 ===');
+  console.log('요청 경로:', req.path);
+  console.log('요청 URL:', req.originalUrl);
+  console.log('쿼리 파라미터:', req.query);
+  console.log('헤더:', req.headers);
+  
   const { store_id, category_id } = req.query;
   
   if (!store_id) {
