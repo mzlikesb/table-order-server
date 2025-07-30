@@ -47,6 +47,83 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 app.use(validateInput);
 
+// /customer 경로를 미들웨어 적용 전에 처리
+app.get('/customer', async (req, res) => {
+  console.log('=== 루트 레벨 /customer 경로 호출됨 (미들웨어 적용 전) ===');
+  console.log('요청 URL:', req.originalUrl);
+  console.log('쿼리 파라미터:', req.query);
+  
+  const { store_id, category_id } = req.query;
+  
+  if (!store_id) {
+    return res.status(400).json({ error: '스토어 ID가 필요합니다' });
+  }
+  
+  try {
+    // 스토어 존재 확인
+    const storeCheck = await pool.query(
+      'SELECT id, name FROM stores WHERE id = $1',
+      [store_id]
+    );
+
+    if (storeCheck.rowCount === 0) {
+      return res.status(404).json({ error: '해당 스토어가 없습니다' });
+    }
+
+    // 카테고리 조회인지 메뉴 조회인지 확인
+    const isCategoryRequest = req.headers['x-request-type'] === 'category' || 
+                             req.query.type === 'category';
+    
+    if (isCategoryRequest) {
+      // 카테고리 조회
+      const result = await pool.query(`
+        SELECT 
+          mc.id, mc.name, mc.description, mc.sort_order,
+          COUNT(m.id) as menu_count,
+          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
+        FROM menu_categories mc
+        LEFT JOIN menus m ON mc.id = m.category_id
+        WHERE mc.store_id = $1 AND mc.is_active = true
+        GROUP BY mc.id
+        ORDER BY mc.sort_order, mc.name
+      `, [store_id]);
+      
+      // COUNT 결과를 숫자로 변환
+      const rows = result.rows.map(row => ({
+        ...row,
+        menu_count: parseInt(row.menu_count, 10),
+        active_menu_count: parseInt(row.active_menu_count, 10)
+      }));
+      
+      res.json(rows);
+    } else {
+      // 메뉴 조회
+      let query = `
+        SELECT 
+          m.id, m.name, m.description, m.price, m.image_url, m.is_available,
+          mc.name as category_name, mc.sort_order
+        FROM menus m
+        JOIN menu_categories mc ON m.category_id = mc.id
+        WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
+      `;
+      let params = [store_id];
+      
+      if (category_id) {
+        query += ' AND m.category_id = $' + (params.length + 1);
+        params.push(parseInt(category_id));
+      }
+      
+      query += ' ORDER BY mc.sort_order, m.name';
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    }
+  } catch (e) {
+    console.error('고객용 데이터 조회 실패:', e);
+    res.status(500).json({ error: '데이터 조회 실패' });
+  }
+});
+
 // Rate Limiting 적용
 app.use('/api/auth/login', loginRateLimit);
 app.use('/api', apiRateLimit);
@@ -265,36 +342,7 @@ app.use('/api/orders/public', (req, res, next) => {
   next();
 });
 
-app.use('/api/menus', menusRouter);
-app.use('/api/menu-categories', menuCategoriesRouter);
-app.use('/api/orders', ordersRouter);
-app.use('/api/tables', tablesRouter);
-app.use('/api/calls', callsRouter);
-app.use('/api/stores', storesRouter);
-app.use('/api/tenant', tenantRouter);
-
-
-
-// 헬스 체크 엔드포인트
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    uptime: process.uptime()
-  });
-});
-
-// API 루트 엔드포인트
-app.get('/api', (req, res) => {
-  res.json({ 
-    message: "테이블오더 서버에 오신 것을 환영합니다!",
-    version: "1.0.0",
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// 임시 해결책: /customer 경로 직접 처리
+// /customer 경로를 명시적으로 처리 (라우터 등록 전)
 app.get('/customer', async (req, res) => {
   console.log('=== 루트 레벨 /customer 경로 호출됨 ===');
   console.log('요청 URL:', req.originalUrl);
@@ -369,6 +417,35 @@ app.get('/customer', async (req, res) => {
     console.error('고객용 데이터 조회 실패:', e);
     res.status(500).json({ error: '데이터 조회 실패' });
   }
+});
+
+app.use('/api/menus', menusRouter);
+app.use('/api/menu-categories', menuCategoriesRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/tables', tablesRouter);
+app.use('/api/calls', callsRouter);
+app.use('/api/stores', storesRouter);
+app.use('/api/tenant', tenantRouter);
+
+
+
+// 헬스 체크 엔드포인트
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime()
+  });
+});
+
+// API 루트 엔드포인트
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: "테이블오더 서버에 오신 것을 환영합니다!",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // 에러 핸들링 미들웨어 (라우터 이후에 추가)
