@@ -317,28 +317,57 @@ app.get('/customer', async (req, res) => {
       return res.status(404).json({ error: '해당 스토어가 없습니다' });
     }
 
-    let query = `
-      SELECT 
-        m.id, m.name, m.description, m.price, m.image_url, m.is_available,
-        mc.name as category_name, mc.sort_order
-      FROM menus m
-      JOIN menu_categories mc ON m.category_id = mc.id
-      WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
-    `;
-    let params = [store_id];
+    // 카테고리 조회인지 메뉴 조회인지 확인
+    const isCategoryRequest = req.headers['x-request-type'] === 'category' || 
+                             req.query.type === 'category';
     
-    if (category_id) {
-      query += ' AND m.category_id = $' + (params.length + 1);
-      params.push(parseInt(category_id));
+    if (isCategoryRequest) {
+      // 카테고리 조회
+      const result = await pool.query(`
+        SELECT 
+          mc.id, mc.name, mc.description, mc.sort_order,
+          COUNT(m.id) as menu_count,
+          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
+        FROM menu_categories mc
+        LEFT JOIN menus m ON mc.id = m.category_id
+        WHERE mc.store_id = $1 AND mc.is_active = true
+        GROUP BY mc.id
+        ORDER BY mc.sort_order, mc.name
+      `, [store_id]);
+      
+      // COUNT 결과를 숫자로 변환
+      const rows = result.rows.map(row => ({
+        ...row,
+        menu_count: parseInt(row.menu_count, 10),
+        active_menu_count: parseInt(row.active_menu_count, 10)
+      }));
+      
+      res.json(rows);
+    } else {
+      // 메뉴 조회
+      let query = `
+        SELECT 
+          m.id, m.name, m.description, m.price, m.image_url, m.is_available,
+          mc.name as category_name, mc.sort_order
+        FROM menus m
+        JOIN menu_categories mc ON m.category_id = mc.id
+        WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
+      `;
+      let params = [store_id];
+      
+      if (category_id) {
+        query += ' AND m.category_id = $' + (params.length + 1);
+        params.push(parseInt(category_id));
+      }
+      
+      query += ' ORDER BY mc.sort_order, m.name';
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
     }
-    
-    query += ' ORDER BY mc.sort_order, m.name';
-    
-    const result = await pool.query(query, params);
-    res.json(result.rows);
   } catch (e) {
-    console.error('고객용 메뉴 조회 실패:', e);
-    res.status(500).json({ error: '메뉴 조회 실패' });
+    console.error('고객용 데이터 조회 실패:', e);
+    res.status(500).json({ error: '데이터 조회 실패' });
   }
 });
 
