@@ -55,6 +55,37 @@ app.use('/api', apiRateLimit);
 const { tenantMiddleware } = require('./middleware/tenant');
 app.use(tenantMiddleware);
 
+// 공개 API 경로들을 미들웨어에서 제외
+app.use('/api/menus/customer', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  next();
+});
+
+app.use('/api/menu-categories/customer', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  next();
+});
+
+app.use('/api/stores/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  next();
+});
+
+app.use('/api/tables/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  next();
+});
+
+app.use('/api/calls/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  next();
+});
+
+app.use('/api/orders/public', (req, res, next) => {
+  // 공개 API이므로 인증 미들웨어를 건너뜀
+  next();
+});
+
 // Socket.IO 연결 관리
 io.on('connection', (socket) => {
   console.log('클라이언트 연결:', socket.id);
