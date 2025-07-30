@@ -47,83 +47,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 app.use(validateInput);
 
-// /customer 경로를 미들웨어 적용 전에 처리
-app.get('/customer', async (req, res) => {
-  console.log('=== 루트 레벨 /customer 경로 호출됨 (미들웨어 적용 전) ===');
-  console.log('요청 URL:', req.originalUrl);
-  console.log('쿼리 파라미터:', req.query);
-  
-  const { store_id, category_id } = req.query;
-  
-  if (!store_id) {
-    return res.status(400).json({ error: '스토어 ID가 필요합니다' });
-  }
-  
-  try {
-    // 스토어 존재 확인
-    const storeCheck = await pool.query(
-      'SELECT id, name FROM stores WHERE id = $1',
-      [store_id]
-    );
-
-    if (storeCheck.rowCount === 0) {
-      return res.status(404).json({ error: '해당 스토어가 없습니다' });
-    }
-
-    // 카테고리 조회인지 메뉴 조회인지 확인
-    const isCategoryRequest = req.headers['x-request-type'] === 'category' || 
-                             req.query.type === 'category';
-    
-    if (isCategoryRequest) {
-      // 카테고리 조회
-      const result = await pool.query(`
-        SELECT 
-          mc.id, mc.name, mc.description, mc.sort_order,
-          COUNT(m.id) as menu_count,
-          COUNT(CASE WHEN m.is_available = true THEN 1 END) as active_menu_count
-        FROM menu_categories mc
-        LEFT JOIN menus m ON mc.id = m.category_id
-        WHERE mc.store_id = $1 AND mc.is_active = true
-        GROUP BY mc.id
-        ORDER BY mc.sort_order, mc.name
-      `, [store_id]);
-      
-      // COUNT 결과를 숫자로 변환
-      const rows = result.rows.map(row => ({
-        ...row,
-        menu_count: parseInt(row.menu_count, 10),
-        active_menu_count: parseInt(row.active_menu_count, 10)
-      }));
-      
-      res.json(rows);
-    } else {
-      // 메뉴 조회
-      let query = `
-        SELECT 
-          m.id, m.name, m.description, m.price, m.image_url, m.is_available,
-          mc.name as category_name, mc.sort_order
-        FROM menus m
-        JOIN menu_categories mc ON m.category_id = mc.id
-        WHERE m.store_id = $1 AND m.is_available = true AND mc.is_active = true
-      `;
-      let params = [store_id];
-      
-      if (category_id) {
-        query += ' AND m.category_id = $' + (params.length + 1);
-        params.push(parseInt(category_id));
-      }
-      
-      query += ' ORDER BY mc.sort_order, m.name';
-      
-      const result = await pool.query(query, params);
-      res.json(result.rows);
-    }
-  } catch (e) {
-    console.error('고객용 데이터 조회 실패:', e);
-    res.status(500).json({ error: '데이터 조회 실패' });
-  }
-});
-
 // Rate Limiting 적용
 app.use('/api/auth/login', loginRateLimit);
 app.use('/api', apiRateLimit);
@@ -445,6 +368,20 @@ app.get('/api', (req, res) => {
     message: "테이블오더 서버에 오신 것을 환영합니다!",
     version: "1.0.0",
     environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// /customer 경로를 404로 처리 (잘못된 요청)
+app.get('/customer', (req, res) => {
+  console.log('=== 잘못된 /customer 경로 요청 감지 ===');
+  console.log('요청 URL:', req.originalUrl);
+  console.log('올바른 경로: /api/menus/customer 또는 /api/menu-categories/customer');
+  res.status(404).json({ 
+    error: '잘못된 경로입니다. 올바른 경로를 사용해주세요.',
+    correctPaths: [
+      '/api/menus/customer?store_id={storeId}',
+      '/api/menu-categories/customer?store_id={storeId}'
+    ]
   });
 });
 
