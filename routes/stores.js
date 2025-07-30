@@ -716,7 +716,8 @@ router.get('/:id/public', async (req, res) => {
 
 /**
  * [GET] /api/stores/public/:id
- * 공개 스토어 정보 조회 (인증 없이) - 대체 경로
+ * 공개 스토어 정보 조회 (인증 없이)
+ * Response: { id, name, code, address, phone, timezone, isActive }
  */
 router.get('/public/:id', async (req, res) => {
   const { id } = req.params;
@@ -724,8 +725,7 @@ router.get('/public/:id', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        id, code, name, address, phone, timezone, small_logo_url, is_active,
-        created_at, updated_at
+        id, name, code, address, phone, timezone, is_active
       FROM stores 
       WHERE id = $1 AND is_active = true
     `, [id]);
@@ -734,7 +734,20 @@ router.get('/public/:id', async (req, res) => {
       return res.status(404).json({ error: '해당 스토어가 없습니다' });
     }
 
-    res.json(result.rows[0]);
+    const storeData = result.rows[0];
+    
+    // 요청된 응답 형식에 맞게 변환
+    const response = {
+      id: storeData.id,
+      name: storeData.name,
+      code: storeData.code,
+      address: storeData.address,
+      phone: storeData.phone,
+      timezone: storeData.timezone,
+      isActive: storeData.is_active
+    };
+
+    res.json(response);
   } catch (e) {
     console.error('공개 스토어 조회 실패:', e);
     res.status(500).json({ error: '스토어 조회 실패' });

@@ -960,6 +960,7 @@ router.get('/store/:storeId/public', async (req, res) => {
 /**
  * [GET] /api/tables/public/:tableId
  * 공개 개별 테이블 정보 조회 (인증 없이)
+ * Response: { id, number, name, storeId, storeName, capacity, status }
  */
 router.get('/public/:tableId', async (req, res) => {
   const { tableId } = req.params;
@@ -967,10 +968,8 @@ router.get('/public/:tableId', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        t.id, t.store_id, t.table_number, t.name, t.capacity, 
-        t.status, t.is_active, t.created_at, t.updated_at,
-        s.id as store_id, s.name as store_name, s.code as store_code,
-        s.address as store_address, s.phone as store_phone
+        t.id, t.table_number, t.name, t.capacity, t.status,
+        s.id as store_id, s.name as store_name
       FROM tables t
       JOIN stores s ON t.store_id = s.id
       WHERE t.id = $1 AND t.is_active = true AND s.is_active = true
@@ -980,7 +979,20 @@ router.get('/public/:tableId', async (req, res) => {
       return res.status(404).json({ error: '해당 테이블이 없습니다' });
     }
 
-    res.json(result.rows[0]);
+    const tableData = result.rows[0];
+    
+    // 요청된 응답 형식에 맞게 변환
+    const response = {
+      id: tableData.id,
+      number: tableData.table_number,
+      name: tableData.name,
+      storeId: tableData.store_id,
+      storeName: tableData.store_name,
+      capacity: tableData.capacity,
+      status: tableData.status
+    };
+
+    res.json(response);
   } catch (e) {
     console.error('공개 테이블 정보 조회 실패:', e);
     res.status(500).json({ error: '테이블 정보 조회 실패' });

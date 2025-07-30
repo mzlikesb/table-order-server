@@ -208,22 +208,19 @@ Content-Type: application/json
 
 ### 공개 스토어 정보 조회
 ```http
-GET /api/stores/1/public
+GET /api/stores/public/1
 ```
 
 **응답:**
 ```json
 {
   "id": 1,
-  "code": "STORE_001",
   "name": "맛있는 식당",
+  "code": "STORE_001",
   "address": "서울시 강남구 테헤란로 123",
   "phone": "02-1234-5678",
   "timezone": "Asia/Seoul",
-  "small_logo_url": "https://example.com/logo.png",
-  "is_active": true,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-15T10:00:00Z"
+  "isActive": true
 }
 ```
 
@@ -259,18 +256,12 @@ GET /api/tables/public/5
 ```json
 {
   "id": 5,
-  "store_id": 1,
-  "table_number": "A1",
+  "number": "A1",
   "name": "창가 테이블",
+  "storeId": 1,
+  "storeName": "맛있는 식당",
   "capacity": 4,
-  "status": "available",
-  "is_active": true,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-15T10:00:00Z",
-  "store_name": "맛있는 식당",
-  "store_code": "STORE_001",
-  "store_address": "서울시 강남구 테헤란로 123",
-  "store_phone": "02-1234-5678"
+  "status": "available"
 }
 ```
 
